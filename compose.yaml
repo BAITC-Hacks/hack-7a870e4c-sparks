@@ -21,7 +21,7 @@ services:
       - "8000:8000"
     environment:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-${OPENAI_KEY:-}}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-6-astra}
     restart: unless-stopped
     stop_grace_period: 15s
   api:

@@ -1,11 +1,19 @@
-import { openapi } from "@elysiajs/openapi";
+import { openapi, type ElysiaOpenAPIConfig } from "@elysiajs/openapi";
 import { SESSION_COOKIE } from "../modules/auth/service";
+
+const specPath = "/api/openapi.json";
+// v1.4.16 strips the leading slash from specPath in its Swagger HTML.
+// The runtime accepts this override although its options type omits `url`.
+const swagger: NonNullable<ElysiaOpenAPIConfig["swagger"]> & { url: string } = {
+	url: specPath,
+};
 
 export const createOpenApiPlugin = () =>
 	openapi({
 		path: "/api/docs",
-		specPath: "/api/openapi.json",
+		specPath,
 		provider: "swagger-ui",
+		swagger,
 		documentation: {
 			info: {
 				title: "Career Quest API",
