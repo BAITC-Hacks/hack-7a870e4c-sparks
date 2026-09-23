@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
@@ -13,7 +12,7 @@ from agent.openai_agent import OpenAIConfigurationError, generate_reply
 from agent.schemas import ChatRequest, PlanRequest
 
 
-load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+load_dotenv()
 
 app = FastAPI(title="Career Quest Agent", version="0.1.0")
 origins = [item.strip() for item in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",") if item.strip()]
