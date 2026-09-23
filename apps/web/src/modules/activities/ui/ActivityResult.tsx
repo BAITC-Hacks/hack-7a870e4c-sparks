@@ -16,6 +16,7 @@ import {
   type ActivityCompletion,
   mapCompletionToView,
 } from "../model/mappers/completion.mapper";
+import { ProgressSuccess } from "./ProgressSuccess";
 
 function percentage(value: number | null) {
   return value === null ? "—" : `${Math.round(value)}%`;
@@ -57,6 +58,7 @@ export function ActivityResult({
       aria-live="polite"
       className="flex flex-col gap-5"
     >
+      {!result.alreadyCompleted && <ProgressSuccess className="self-center" />}
       <Alert>
         <CheckCircle2 aria-hidden="true" />
         <AlertTitle>
