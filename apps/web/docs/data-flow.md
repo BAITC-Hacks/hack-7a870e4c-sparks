@@ -7,38 +7,49 @@ UI component
 ↓
 module model query/mutation hook
 ↓
-shared/api/generated
+module api adapter
+↓
+shared/api/generated axios client
 ↓
 backend
 ```
 
 ## Orval And TanStack Query
 
-- `pnpm orval` generates types, request functions and React Query helpers from
-  OpenAPI into `src/shared/api/generated.ts`.
+- `pnpm orval` generates TypeScript types and axios request functions from
+  OpenAPI into `src/shared/api/generated.ts`. React Query hooks are not generated
+  there and are written in the owning module.
 - OpenAPI source is configured with `ORVAL_PATH_URL`; when it is absent, the
   demo Petstore schema is used.
 - Browser API base URL is configured with `NEXT_PUBLIC_API_URL`.
 - HTTP instance and wrappers live in `src/shared/lib/client/`.
+- Every API-backed module has an `api/` layer. Its functions are the only module
+  boundary that imports generated axios clients and own endpoint-specific
+  request/response mapping.
 - Module hooks in `modules/*/model/queries` and `modules/*/model/mutations`
-  import generated functions, assign query keys, invalidate queries and map DTO
-  when needed.
+  call the module `api/` layer, assign query keys, invalidate queries and map DTO
+  to domain/view models when needed.
 - Components do not call generated functions directly.
+- Hooks do not import `@/shared/api/generated` directly.
 - Routes do not call generated functions directly. Keep `app/` thin and put
   data orchestration in module hooks or scenario modules.
 
-## Optional Module API Adapter
+## Module API Layer
 
-`modules/*/api` is needed only when generated client is not enough:
+`modules/*/api` is required for every module that talks to the backend. It is the
+stable boundary between the generated transport client and the module model.
 
-- composite request;
-- upload/download;
-- SSE/WebSocket;
-- polling adapter;
-- legacy endpoint;
-- complex transport mapping that should not live inside a hook.
+Typical responsibilities:
 
-Do not create module `api/` only to re-export Orval-generated functions.
+- call the generated axios function;
+- provide a domain-oriented function name and arguments;
+- keep endpoint paths and transport details out of hooks and UI;
+- normalize API errors;
+- map or compose DTOs when the module needs a view model;
+- handle upload/download, polling or other non-trivial transport behavior.
+
+The adapter must not become a second generated client. Keep it small and focused;
+do not duplicate endpoint schemas or business calculations there.
 
 ## Zustand
 
