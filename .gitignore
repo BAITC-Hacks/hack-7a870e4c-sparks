@@ -1,5 +1,6 @@
 node_modules/
 .next/
+venv/
 .env
 .env.*
 !.env.example
@@ -10,6 +11,10 @@ data/
 coverage/
 playwright-report/
 test-results/
+venv/
+.venv/
+__pycache__/
+*.py[cod]
 .DS_Store
 *.tsbuildinfo
 docs/
