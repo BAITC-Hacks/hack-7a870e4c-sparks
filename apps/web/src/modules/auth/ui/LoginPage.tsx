@@ -1,26 +1,17 @@
 "use client";
 
+import { ArrowRight, Eye, EyeOff, LockKeyhole, RotateCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Input,
-  Label,
-  Skeleton,
-} from "@/shared/components/ui";
+import { type FormEvent, useEffect, useState } from "react";
+import { Alert, AlertDescription, AlertTitle, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Skeleton } from "@/shared/components/ui";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/shared/components/ui/field";
+import { Spinner } from "@/shared/components/ui/spinner";
 import { useRouter } from "@/shared/configs/i18/navigation";
 import { getApiErrorMessage } from "@/shared/lib/client/custom-instance";
 
 import { useLogin } from "../model/mutations/use-login";
 import { useSession } from "../model/queries/use-session";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import { LoginIllustration } from "./LoginIllustration";
 
 export function LoginPage() {
@@ -30,154 +21,61 @@ export function LoginPage() {
   const t = useTranslations("auth");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<"employee" | "hr">("employee");
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    if (session.data)
-      router.replace(session.data.role === "hr" ? "/hr" : "/employee");
+    if (session.data) router.replace(session.data.role === "hr" ? "/hr" : "/employee");
   }, [router, session.data]);
 
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
+  function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    login.mutate(
-      { username: username.trim(), password },
-      {
-        onSuccess: (user) =>
-          router.push(user.role === "hr" ? "/hr" : "/employee"),
-      },
-    );
+    if (!username.trim() || !password || login.isPending) return;
+    login.mutate({ username: username.trim(), password }, {
+      onSuccess: (user) => router.replace(user.role === "hr" ? "/hr" : "/employee"),
+    });
   }
 
   return (
-    <main className="relative isolate flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-10">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10 select-none"
-      >
-        <div className="absolute -left-48 -top-64 size-[560px] rounded-full bg-muted/60 sm:size-[720px]" />
-        <div className="absolute -bottom-72 -right-48 size-[640px] rounded-full border border-primary/10 bg-secondary/35" />
-        <svg
-          aria-hidden="true"
-          className="absolute inset-0 size-full text-primary/[0.06] [mask-image:radial-gradient(ellipse_at_center,transparent_25%,black_100%)]"
-          width="100%"
-          height="100%"
-        >
-          <defs>
-            <pattern
-              id="login-background-grid"
-              width="48"
-              height="48"
-              patternUnits="userSpaceOnUse"
-            >
-              <path d="M48 0H0V48" fill="none" stroke="currentColor" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#login-background-grid)" />
-        </svg>
-        <div className="absolute -right-24 top-12 size-80 rounded-full border border-primary/10 sm:right-12">
-          <div className="absolute inset-8 rounded-full border border-primary/10" />
-          <div className="absolute inset-16 rounded-full border border-primary/10" />
-        </div>
-        <div className="absolute bottom-16 left-[12%] h-px w-24 bg-primary/15" />
-        <div className="absolute bottom-16 left-[12%] size-2 -translate-y-1/2 rounded-full bg-accent/40" />
-      </div>
-      <div className="mx-auto grid w-full max-w-5xl gap-8 md:grid-cols-[1fr_420px] md:items-center">
-        <section className="space-y-4">
-
-          <LoginIllustration />
-          <p className="text-sm font-medium text-primary">Career Quest</p>
-          <h1 className="text-4xl font-semibold tracking-tight">
-            {t("introTitle")}
-          </h1>
-          <p className="max-w-lg text-muted-foreground">
-            {t("introDescription")}
-          </p>
+    <main className="flex min-h-svh flex-col bg-background px-4 py-6 sm:px-8">
+      <header className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4">
+        <p className="font-semibold tracking-tight">Career Quest</p>
+        <LanguageSwitcher />
+      </header>
+      <div className="mx-auto grid w-full max-w-5xl flex-1 content-center gap-8 py-8 md:grid-cols-[minmax(0,1fr)_400px] md:items-center md:gap-16 md:py-16">
+        <section className="flex flex-col gap-5">
+          <div className="hidden md:block"><LoginIllustration /></div>
+          <h1 className="max-w-lg text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">{t("introTitle")}</h1>
+          <p className="max-w-lg text-base leading-7 text-muted-foreground">{t("introDescription")}</p>
+          <p className="hidden items-center gap-2 text-sm text-muted-foreground md:flex"><LockKeyhole aria-hidden="true" className="size-4 shrink-0" />{t("privacyHint")}</p>
         </section>
         <Card>
-          {session.isPending ? (
+          {session.isPending || session.data ? (
             <>
-              <CardHeader>
-                <Skeleton className="h-6 w-36" />
-                <Skeleton className="mt-2 h-4 w-64" />
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Skeleton className="h-9 w-full" />
-                <Skeleton className="h-9 w-full" />
-                <Skeleton className="h-10 w-full" />
-              </CardContent>
+              <CardHeader><p className="sr-only" role="status">{t("sessionLoading")}</p><Skeleton className="h-6 w-36" /><Skeleton className="h-4 w-full" /></CardHeader>
+              <CardContent className="flex flex-col gap-4" aria-busy="true"><Skeleton className="h-11 w-full" /><Skeleton className="h-11 w-full" /><Skeleton className="h-11 w-full" /></CardContent>
             </>
           ) : (
             <>
-              <CardHeader>
-                <CardTitle>{t("title")}</CardTitle>
-                <CardDescription>{t("description")}</CardDescription>
-              </CardHeader>
+              <CardHeader><CardTitle><h2>{t("title")}</h2></CardTitle><CardDescription>{t("description")}</CardDescription></CardHeader>
               <CardContent>
-                <form className="space-y-4" onSubmit={submit}>
-                  {session.isError && (
-                    <Alert variant="destructive">
-                      <AlertTitle>{t("sessionError")}</AlertTitle>
-                      <AlertDescription>
-                        {getApiErrorMessage(session.error)}
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                  {login.isError && (
-                    <Alert variant="destructive">
-                      <AlertTitle>{t("loginError")}</AlertTitle>
-                      <AlertDescription>
-                        {getApiErrorMessage(login.error)}
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                  <div className="grid grid-cols-2 gap-2 rounded-md bg-muted p-1">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={mode === "employee" ? "default" : "ghost"}
-                      onClick={() => setMode("employee")}
-                    >
-                      {t("employeeMode")}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={mode === "hr" ? "default" : "ghost"}
-                      onClick={() => {
-                        setMode("hr");
-                        setUsername("hr");
-                      }}
-                    >
-                      {t("hrMode")}
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="username">{t("username")}</Label>
-                    <Input
-                      id="username"
-                      autoComplete="username"
-                      value={username}
-                      onChange={(event) => setUsername(event.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">{t("password")}</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      autoComplete="current-password"
-                      value={password}
-                      onChange={(event) => setPassword(event.target.value)}
-                      required
-                    />
-                  </div>
-                  <Button
-                    className="w-full"
-                    type="submit"
-                    disabled={login.isPending}
-                  >
+                <form className="flex flex-col gap-5" onSubmit={submit} aria-busy={login.isPending}>
+                  {session.isError && <Alert variant="destructive"><AlertTitle>{t("sessionError")}</AlertTitle><AlertDescription>{getApiErrorMessage(session.error)}<Button type="button" variant="outline" size="sm" disabled={session.isFetching} onClick={() => void session.refetch()}><RotateCcw data-icon="inline-start" aria-hidden="true" />{t("retry")}</Button></AlertDescription></Alert>}
+                  {login.isError && <Alert variant="destructive"><AlertTitle>{t("loginError")}</AlertTitle><AlertDescription>{getApiErrorMessage(login.error)}</AlertDescription></Alert>}
+                  <FieldGroup>
+                    <Field data-disabled={login.isPending}>
+                      <FieldLabel htmlFor="username">{t("username")}</FieldLabel>
+                      <Input id="username" autoComplete="username" autoCapitalize="none" spellCheck={false} value={username} onChange={(event) => { setUsername(event.target.value); login.reset(); }} required disabled={login.isPending} className="h-11" />
+                    </Field>
+                    <Field data-disabled={login.isPending}>
+                      <div className="flex items-center justify-between gap-2"><FieldLabel htmlFor="password">{t("password")}</FieldLabel><Button type="button" variant="ghost" size="sm" disabled={login.isPending} aria-controls="password" aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff aria-hidden="true" data-icon="inline-start" /> : <Eye aria-hidden="true" data-icon="inline-start" />}{t(showPassword ? "hidePassword" : "showPassword")}</Button></div>
+                      <Input id="password" type={showPassword ? "text" : "password"} autoComplete="current-password" value={password} onChange={(event) => { setPassword(event.target.value); login.reset(); }} required disabled={login.isPending} className="h-11" aria-describedby="role-hint" />
+                      <FieldDescription id="role-hint">{t("roleHint")}</FieldDescription>
+                    </Field>
+                  </FieldGroup>
+                  <Button className="h-11 w-full" type="submit" disabled={login.isPending || !username.trim() || !password}>
+                    {login.isPending ? <Spinner aria-hidden="true" data-icon="inline-start" /> : null}
                     {login.isPending ? t("submitting") : t("submit")}
+                    {!login.isPending && <ArrowRight aria-hidden="true" data-icon="inline-end" />}
                   </Button>
                 </form>
               </CardContent>
@@ -185,6 +83,7 @@ export function LoginPage() {
           )}
         </Card>
       </div>
+      <p className="mx-auto max-w-5xl text-center text-xs leading-5 text-muted-foreground">{t("demoHint")}</p>
     </main>
   );
 }

@@ -10,7 +10,7 @@ export function useLogout() {
 
   return useMutation({
     mutationFn: () => authApi.logout(),
-    onSettled: async () => {
+    onSuccess: async () => {
       queryClient.removeQueries({ queryKey: sessionKeys.all });
       await queryClient.cancelQueries();
       queryClient.clear();
