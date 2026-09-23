@@ -1,13 +1,32 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import {
   advisorReply,
+  catalog,
+  employeeId,
   mockStage3Api,
   plan,
+  profile,
   recommendations,
 } from "./stage3-fixtures";
 
 const recommendation = recommendations.recommendations[0];
 const activityPath = `/employee/activity/${recommendation.event.event_id}`;
+
+async function navigateFromMenu(page: Page, label: string) {
+  const menu = page.getByRole("button", { name: "Открыть меню", exact: true });
+  if (await menu.isVisible()) {
+    await menu.click();
+    await page
+      .getByRole("dialog")
+      .getByRole("link", { name: label, exact: true })
+      .click();
+  } else {
+    await page
+      .getByRole("navigation")
+      .getByRole("link", { name: label, exact: true })
+      .click();
+  }
+}
 
 test("API recommendations lead to reloadable activity details", async ({
   page,
@@ -231,10 +250,7 @@ test("advisor sends only the message and bounded dialogue context", async ({
     page.getByText(recommendation.event.title, { exact: true }),
   ).toBeVisible();
   const recommendationsBeforeChat = requests.recommendations.length;
-  await page
-    .getByRole("navigation")
-    .getByRole("link", { name: "Карьерный путь", exact: true })
-    .click();
+  await navigateFromMenu(page, "Карьерный путь");
   const input = page.getByRole("textbox");
   await expect(input).toBeVisible();
   const plansBeforeChat = requests.plans;
@@ -270,10 +286,7 @@ test("advisor sends only the message and bounded dialogue context", async ({
   await expect(
     page.getByRole("log").getByText(advisorReply, { exact: true }),
   ).toHaveCount(2);
-  await page
-    .getByRole("navigation")
-    .getByRole("link", { name: "Обзор", exact: true })
-    .click();
+  await navigateFromMenu(page, "Обзор");
   await expect
     .poll(() => requests.recommendations.length)
     .toBeGreaterThan(recommendationsBeforeChat);
@@ -357,9 +370,10 @@ test("activity details explain unavailable audience, prerequisites and session",
   ).toBeVisible();
   await expect(
     page.getByRole("button", {
-      name: /Начать активность|Завершить активность/,
+      name: "Завершить активность",
+      exact: true,
     }),
-  ).toHaveCount(0);
+  ).toBeDisabled();
 });
 
 test("plan activity remains reloadable when absent from current recommendations", async ({
@@ -380,6 +394,103 @@ test("plan activity remains reloadable when absent from current recommendations"
   expect(requests.plans).toBe(2);
   expect(requests.unexpected).toEqual([]);
 });
+
+for (const scenario of [
+  {
+    name: "a prior-day EV_036 completion allows a plan-only repeat",
+    eventId: "EV_036",
+    date: "2026-09-30",
+    completedAt: "2026-09-30T12:00:00.000Z",
+    canRepeat: true,
+  },
+  {
+    name: "an EV_036 completion on the calculation date skips the plan",
+    eventId: "EV_036",
+    date: catalog.as_of_date,
+    completedAt: null,
+    canRepeat: false,
+  },
+  {
+    name: "an EV_036 completion timestamp on the calculation date skips the plan",
+    eventId: "EV_036",
+    date: "2026-09-30",
+    completedAt: `${catalog.as_of_date}T12:00:00.000Z`,
+    canRepeat: false,
+  },
+  {
+    name: "a completed nonrepeatable activity skips the plan",
+    eventId: recommendation.event.event_id,
+    date: "2026-09-30",
+    completedAt: "2026-09-30T12:00:00.000Z",
+    canRepeat: false,
+  },
+]) {
+  test(scenario.name, async ({ page }) => {
+    const requests = await mockStage3Api(page, {
+      profile: {
+        ...profile,
+        history: [
+          {
+            record_id: "completed-plan-activity",
+            employee_id: employeeId,
+            event_id: scenario.eventId,
+            title: recommendation.event.title,
+            date: scenario.date,
+            completed_at: scenario.completedAt,
+            due_date: null,
+            status: "completed",
+            completion_pct: 100,
+            score: null,
+            feedback_rating: null,
+            assigned_by: "self",
+            mandatory: false,
+          },
+        ],
+      },
+      recommendations: { ...recommendations, recommendations: [] },
+      plan: {
+        ...plan,
+        recommendations: [
+          {
+            ...recommendation,
+            event: {
+              ...recommendation.event,
+              event_id: scenario.eventId,
+            },
+          },
+        ],
+      },
+    });
+    await page.goto(`/ru/employee/activity/${scenario.eventId}`);
+    await expect(
+      page.getByText(recommendation.event.title, { exact: true }),
+    ).toBeVisible();
+    if (scenario.canRepeat) {
+      await expect(
+        page.getByRole("button", {
+          name: "Завершить активность",
+          exact: true,
+        }),
+      ).toBeEnabled();
+      expect(requests.plans).toBe(1);
+    } else {
+      await expect(
+        page.getByRole("button", {
+          name: "Активность завершена",
+          exact: true,
+        }),
+      ).toBeDisabled();
+      await expect(
+        page.getByRole("button", {
+          name: "Завершить активность",
+          exact: true,
+        }),
+      ).toHaveCount(0);
+      expect(requests.plans).toBe(0);
+    }
+    expect(requests.unexpected).toEqual([]);
+  });
+}
 
 test("an expired advisor request returns to login without retrying", async ({
   page,

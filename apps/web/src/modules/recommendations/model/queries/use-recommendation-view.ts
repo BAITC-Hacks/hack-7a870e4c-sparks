@@ -7,7 +7,7 @@ import { useCatalog } from "@/modules/catalog";
 import { getApiErrorStatus } from "@/shared/lib/client/custom-instance";
 import {
   mapRecommendation,
-  mapRecommendations,
+  mapRecommendationViews,
 } from "../mappers/recommendations.mapper";
 import { useRecommendations } from "./use-recommendations";
 
@@ -21,7 +21,7 @@ export function useRecommendationView(activityId?: string) {
   // Details use the same recommendation response as the dashboard. No invented event endpoint.
   const items =
     profile.data && catalog.data && recommendations.data
-      ? mapRecommendations(recommendations.data, profile.data, catalog.data)
+      ? mapRecommendationViews(recommendations.data, profile.data, catalog.data)
       : [];
   const rawActivity = recommendations.data?.recommendations.find(
     (item) => item.event.event_id === activityId,

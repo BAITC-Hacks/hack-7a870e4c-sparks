@@ -1,5 +1,5 @@
+import { ActivityDetails } from "@/modules/activities";
 import { RolePage } from "@/modules/auth";
-import { ActivityDetails } from "@/modules/recommendations";
 
 export default async function ActivityPage({
   params,

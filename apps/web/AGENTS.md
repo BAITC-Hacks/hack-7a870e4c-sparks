@@ -1,4 +1,5 @@
 # AGENTS.md
+USE APP-DOCS  files for up-to-date information on architecture , UI/UX  and tooling.
 
 ## Purpose
 

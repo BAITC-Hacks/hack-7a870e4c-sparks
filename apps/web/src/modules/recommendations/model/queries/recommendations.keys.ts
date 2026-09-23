@@ -1,3 +1,5 @@
-export const recommendationKeys = {
-  detail: (employeeId: string) => ["recommendations", employeeId] as const,
+export const recommendationsKeys = {
+  all: ["recommendations"] as const,
+  detail: (employeeId: string) =>
+    [...recommendationsKeys.all, employeeId] as const,
 };

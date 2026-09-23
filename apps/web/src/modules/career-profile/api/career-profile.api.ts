@@ -8,6 +8,7 @@ import {
 const api = getCareerQuestAPI();
 
 export type UpdateCareerGoal = UpdateGoalBodyOne;
+export type ProfileData = GetProfileResult;
 
 export const careerProfileApi = {
   getProfile: (employeeId: string): Promise<GetProfileResult> =>

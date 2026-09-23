@@ -3,12 +3,7 @@
 import { ArrowUpRight, RotateCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Badge, Button } from "@/shared/components/ui";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/shared/components/ui/empty";
+import { Empty, EmptyHeader, EmptyTitle } from "@/shared/components/ui/empty";
 import { Link } from "@/shared/configs/i18/navigation";
 import { useRecommendationView } from "../model/queries/use-recommendation-view";
 import { RecommendationContent } from "./RecommendationContent";
@@ -59,7 +54,6 @@ export function RecommendationsSection() {
             <Empty className="border">
               <EmptyHeader>
                 <EmptyTitle>{t("empty")}</EmptyTitle>
-                <EmptyDescription>{query.response.message}</EmptyDescription>
               </EmptyHeader>
               <Button asChild variant="outline">
                 <Link href="/employee/profile">{t("editGoal")}</Link>

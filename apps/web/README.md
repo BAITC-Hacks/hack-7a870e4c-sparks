@@ -1,4 +1,65 @@
-# Crystal Architecture v2
+# Career Quest — frontend
+
+Интерфейс сотрудника на Next.js объединяет стадии 3 и 4: cookie-сессия, профиль,
+карьерная цель, рекомендации, карьерный план, AI-советник и демонстрационное
+завершение активности. После завершения показываются фактические изменения
+навыков и готовности из ответа API; повторный
+запрос не начисляет прогресс снова. Доступны русский и казахский языки.
+
+Для локального запуска серверной части выполните `./init.sh` из корня
+репозитория, затем из `apps/web` — команды установки и запуска ниже.
+`NEXT_PUBLIC_API_URL` в локальном `.env` должен указывать на доступный API
+(по умолчанию при стандартном запуске сервера — `http://localhost:3001`).
+Учётные данные берутся из конфигурации API; секреты не хранить в Git.
+
+Сценарий проверки стадии 4: войти сотрудником → `/employee` → «Подробнее»
+у доступного следующего шага → «Завершить активность» → сравнить до/после →
+вернуться к обзору и открыть профиль с обновлёнными навыками и историей.
+Повторное открытие ссылки сохраняет статус завершения, но не выдумывает старый
+снимок для сравнения. Подтверждение демонстрационное, без интеграции с LMS.
+
+План и AI-советник доступны на `/employee/career`; HR-экраны и импорт ещё не
+подключены к frontend. API не предоставляет отдельный endpoint деталей
+активности. Детали берутся из текущих рекомендаций; если шага в них нет и
+завершение ещё не сохранено, загружается карьерный план. После завершения
+прямая ссылка показывает запись истории. Дата среза берётся из каталога API.
+Подробнее: [реализация стадии 4](app-docs/api-implementation-stages.md#реализация-стадии-4).
+
+Проверки:
+
+```bash
+pnpm test:run
+pnpm exec tsc --noEmit
+pnpm lint:deps
+pnpm build
+pnpm exec playwright test tests/e2e/stage3.spec.ts tests/e2e/activity-completion.spec.ts --project=chromium --project="Mobile Chrome" --workers=2
+```
+
+Playwright-сценарии используют перехват HTTP с типизированными ответами API и
+не изменяют живые профили. Для первого запуска нужен Chromium:
+`pnpm exec playwright install chromium --only-shell`.
+До объединения веток при проверке стадии 3 прошли 108 unit/component tests,
+15 Chromium-сценариев и production build; подробности — в
+[отчёте стадии 3](app-docs/stage-3-verification.md).
+При отдельной проверке стадии 4 прошли 103 unit-теста, 16 Playwright-сценариев
+(Chromium desktop/mobile), TypeScript, dependency boundaries, сборка и Biome
+для изменённых файлов. Проверены RU/KK, reduced motion, повторное завершение,
+ошибки 401/403 и защита кеша при выходе или нескольких запросах.
+Эти результаты относятся к отдельным стадиям до объединения и не являются
+результатом повторной проверки объединённой версии.
+
+Для объединённой версии прошли `pnpm test:run` (150 unit/component tests),
+`pnpm exec tsc --noEmit --incremental false`, `pnpm lint:deps`, `pnpm build` и
+54 Playwright-сценария в Chromium desktop/mobile. Biome проверил 38 изменённых
+файлов исходного кода, конфигурации и переводов. Проверены общий сценарий
+стадий 3–4, истечение сессии, переходы из плана, история и допустимый повтор
+`EV_036` на другую дату среза.
+
+Общие `pnpm lint` и `pnpm lint:unused` пока выявляют ошибки форматирования и
+неиспользуемые части исходного шаблона; эта стадия не заявляет их успешное прохождение.
+Публичное развёртывание не проверено.
+
+## Основа проекта — Crystal Architecture v2
 
 Frontend template for Next.js App Router projects with React 19, Orval,
 TanStack Query, shadcn/ui, nuqs, Zustand, Biome, Vitest and Playwright.
@@ -107,7 +168,7 @@ a selected ID in the URL.
 
 ## Documentation
 
-- [Architecture](docs/architecture.md)
-- [Module Structure](docs/module-structure.md)
-- [Data Flow](docs/data-flow.md)
-- [Tooling](docs/tooling.md)
+- [Architecture](app-docs/architecture.md)
+- [Module Structure](app-docs/module-structure.md)
+- [Data Flow](app-docs/data-flow.md)
+- [Tooling](app-docs/tooling.md)

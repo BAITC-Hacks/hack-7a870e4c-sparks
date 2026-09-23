@@ -1,9 +1,59 @@
 import type {
-  Recommendation,
   RecommendationCatalog,
   RecommendationProfile,
-  RecommendationsResult,
+  Recommendation as RecommendationResponse,
+  RecommendationsResponse,
 } from "../../api/recommendations.api";
+
+export type Recommendation = Omit<RecommendationResponse, "event"> & {
+  event: Omit<RecommendationResponse["event"], "prerequisites"> & {
+    prerequisites: Record<string, number>;
+  };
+};
+
+export type RecommendationsResult = Omit<
+  RecommendationsResponse,
+  "recommendations"
+> & {
+  recommendations: Recommendation[];
+};
+
+export function mapRecommendationData(
+  recommendation: RecommendationResponse,
+): Recommendation {
+  return {
+    ...recommendation,
+    event: {
+      ...recommendation.event,
+      prerequisites: Object.fromEntries(
+        Object.entries(recommendation.event.prerequisites).map(
+          ([skillId, level]) => {
+            if (
+              typeof level !== "number" ||
+              !Number.isInteger(level) ||
+              level < 0 ||
+              level > 5
+            ) {
+              throw new Error(
+                "Не удалось проверить требования активности. Обновите рекомендации.",
+              );
+            }
+            return [skillId, level];
+          },
+        ),
+      ),
+    },
+  };
+}
+
+export function mapRecommendations(
+  response: RecommendationsResponse,
+): RecommendationsResult {
+  return {
+    ...response,
+    recommendations: response.recommendations.map(mapRecommendationData),
+  };
+}
 
 export type BlockedReason =
   | "mandatory"
@@ -16,7 +66,7 @@ export type BlockedReason =
 
 function skillLevel(value: unknown): number | null {
   return typeof value === "number" &&
-    Number.isFinite(value) &&
+    Number.isInteger(value) &&
     value >= 0 &&
     value <= 5
     ? value
@@ -24,7 +74,7 @@ function skillLevel(value: unknown): number | null {
 }
 
 export function mapRecommendation(
-  recommendation: Recommendation,
+  recommendation: RecommendationResponse,
   profile: RecommendationProfile,
   catalog: RecommendationCatalog,
 ) {
@@ -56,8 +106,8 @@ export function mapRecommendation(
       record.event_id === event.event_id &&
       record.status === "completed" &&
       (event.event_id !== "EV_036" ||
-        (record.completed_at?.slice(0, 10) ?? record.date) ===
-          catalog.as_of_date),
+        record.date === catalog.as_of_date ||
+        record.completed_at?.slice(0, 10) === catalog.as_of_date),
   );
   if (completed) reasons.add("completed");
   const nextSession = recommendation.next_session;
@@ -84,8 +134,8 @@ export function mapRecommendation(
 
 export type RecommendationView = ReturnType<typeof mapRecommendation>;
 
-export function mapRecommendations(
-  response: RecommendationsResult,
+export function mapRecommendationViews(
+  response: RecommendationsResponse,
   profile: RecommendationProfile,
   catalog: RecommendationCatalog,
 ) {

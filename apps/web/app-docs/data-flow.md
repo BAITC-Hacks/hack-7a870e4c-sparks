@@ -19,8 +19,9 @@ backend
 - `pnpm orval` generates TypeScript types and axios request functions from
   OpenAPI into `src/shared/api/generated.ts`. React Query hooks are not generated
   there and are written in the owning module.
-- OpenAPI source is configured with `ORVAL_PATH_URL`; when it is absent, the
-  demo Petstore schema is used.
+- OpenAPI source is `../../apps/api/openapi.json` in `orval.config.js` (the
+  Career Quest API). The current config does not read `ORVAL_PATH_URL` and has
+  no Petstore fallback.
 - Browser API base URL is configured with `NEXT_PUBLIC_API_URL`.
 - HTTP instance and wrappers live in `src/shared/lib/client/`.
 - Every API-backed module has an `api/` layer. Its functions are the only module

@@ -7,7 +7,8 @@ import {
 
 const api = getCareerQuestAPI();
 
-export type RecommendationsResult = GetRecommendationsResult;
+export type RecommendationsResponse = GetRecommendationsResult;
+export type RecommendationsResult = RecommendationsResponse;
 export type Recommendation = RecommendationsResult["recommendations"][number];
 export type RecommendationProfile = GetProfileResult;
 export type RecommendationCatalog = GetCatalogResult;

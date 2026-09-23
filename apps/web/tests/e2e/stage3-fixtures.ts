@@ -189,11 +189,13 @@ export const chatResponse: ChatWithCareerAdvisor200 = {
 type MockOptions = {
   role?: "employee" | "hr";
   sessionStatus?: number;
+  profile?: GetProfile200;
   recommendations?: GetRecommendations200;
   recommendationsStatus?: number;
   recommendationsMessage?: string;
   planStatus?: number;
   planMessage?: string;
+  plan?: GetCareerPlan200;
   chatStatus?: number;
   chatMessage?: string;
 };
@@ -226,7 +228,7 @@ export async function mockStage3Api(page: Page, options: MockOptions = {}) {
     } else if (path === "/api/catalog") {
       await respond(route, catalog);
     } else if (path === `/api/employees/${employeeId}`) {
-      await respond(route, profile);
+      await respond(route, options.profile ?? profile);
     } else if (path === `/api/employees/${employeeId}/recommendations`) {
       requests.recommendations.push(request.postDataJSON());
       await respond(
@@ -246,7 +248,7 @@ export async function mockStage3Api(page: Page, options: MockOptions = {}) {
         route,
         options.planStatus
           ? { message: options.planMessage ?? "AI-план временно недоступен." }
-          : plan,
+          : (options.plan ?? plan),
         options.planStatus,
       );
     } else if (path === `/api/employees/${employeeId}/chat`) {

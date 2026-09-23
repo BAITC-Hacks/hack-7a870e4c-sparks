@@ -7,7 +7,7 @@ import type {
 } from "../../api/recommendations.api";
 import {
   mapRecommendation,
-  mapRecommendations,
+  mapRecommendationViews,
 } from "../mappers/recommendations.mapper";
 
 const profile: RecommendationProfile = {
@@ -163,7 +163,7 @@ describe("recommendation availability", () => {
         })),
       ],
     };
-    const mapped = mapRecommendations(response, profile, catalog);
+    const mapped = mapRecommendationViews(response, profile, catalog);
     expect(mapped).toHaveLength(3);
     expect(mapped.every((item) => !item.event.mandatory)).toBe(true);
   });
