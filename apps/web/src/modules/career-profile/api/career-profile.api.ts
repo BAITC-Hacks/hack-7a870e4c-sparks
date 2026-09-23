@@ -7,6 +7,8 @@ import {
 
 const api = getCareerQuestAPI();
 
+export type ProfileData = GetProfileResult;
+
 export const careerProfileApi = {
   getProfile: (employeeId: string): Promise<GetProfileResult> =>
     api.getProfile(employeeId),

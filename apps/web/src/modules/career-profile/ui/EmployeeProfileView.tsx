@@ -2,11 +2,12 @@
 
 import { AlertCircle, CheckCircle2, RotateCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { useSession } from "@/modules/auth";
+import { useCatalog } from "@/modules/catalog";
 import {
   Alert,
   AlertDescription,
@@ -31,7 +32,6 @@ import {
 } from "@/shared/components/ui";
 import { getApiErrorMessage } from "@/shared/lib/client/custom-instance";
 
-import { useCatalog } from "../../catalog/model/queries/use-catalog";
 import { mapProfileToView } from "../model/mappers/profile.mapper";
 import { useUpdateCareerGoal } from "../model/mutations/use-update-career-goal";
 import { useEmployeeProfile } from "../model/queries/use-employee-profile";
@@ -46,10 +46,12 @@ function formatDate(value: string) {
 
 export function EmployeeProfileView({
   compact = false,
+  nextStep,
 }: {
   compact?: boolean;
+  nextStep?: ReactNode;
 }) {
-  const t = useTranslations("careerProfile");
+  const t = useTranslations("auth.careerProfile");
   const session = useSession();
   const employeeId = session.data?.employee_id ?? null;
   const profile = useEmployeeProfile(employeeId);
@@ -173,6 +175,8 @@ export function EmployeeProfileView({
           </AlertDescription>
         </Alert>
       )}
+
+      {nextStep}
 
       {!compact && (
         <Card>

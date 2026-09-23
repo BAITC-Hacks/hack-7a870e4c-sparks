@@ -1,5 +1,5 @@
 import { RolePage } from "@/modules/auth";
-import { EmployeeProfileView } from "@/modules/career-profile";
+import { EmployeeDashboard } from "@/modules/career-quest";
 
 export default function EmployeePage() {
   return (
@@ -8,7 +8,7 @@ export default function EmployeePage() {
       titleKey="employeeTitle"
       descriptionKey="employeeDescription"
     >
-      <EmployeeProfileView compact />
+      <EmployeeDashboard />
     </RolePage>
   );
 }

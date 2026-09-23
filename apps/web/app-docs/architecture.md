@@ -43,7 +43,7 @@ pnpm lint:deps
 External imports go through `index.ts`:
 
 ```ts
-import { UserProfile, useUpdateUser } from "@/modules/users";
+import { EmployeeProfileView, useEmployeeProfile } from "@/modules/career-profile";
 import { UserAvatar, userSchema } from "@/entities/user";
 ```
 
@@ -51,7 +51,7 @@ Do not import internal files of another module:
 
 ```ts
 // Forbidden
-import { UserProfile } from "@/modules/users/ui/UserProfile";
+import { EmployeeProfileView } from "@/modules/career-profile/ui/EmployeeProfileView";
 ```
 
 ## Base And Scenario Modules
