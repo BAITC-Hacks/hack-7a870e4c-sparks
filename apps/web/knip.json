@@ -24,7 +24,6 @@
   "ignoreDependencies": [
     "@hookform/resolvers",
     "react-hook-form",
-    "nuqs",
     "zustand",
     "@storybook/react",
     "@testing-library/user-event",

@@ -24,7 +24,12 @@ export type ProfileView = {
 };
 
 function asLevel(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
+  return typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value <= 5
+    ? value
+    : null;
 }
 
 export function mapProfileToView(
