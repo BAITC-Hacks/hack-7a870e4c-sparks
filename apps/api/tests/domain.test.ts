@@ -69,10 +69,13 @@ describe("Career Quest: исходные данные и расчёт состо
 		).toBe(true);
 	});
 
-	test("новые профили получают прирост после оценки, старые завершения не считаются снова", () => {
+	test("история без точной даты завершения не добавляет навыки импортированным профилям", () => {
 		const backend = profileFor(jury, "JURY_BACKEND_ALPHA");
 		expect(backend.employee.skills.SK_PYTHON).toBe(1);
-		expect(backend.effective_skills.SK_PYTHON).toBe(2);
+		expect(backend.effective_skills.SK_PYTHON).toBe(1);
+		expect(
+			backend.warnings.some((message) => message.includes("completed_at")),
+		).toBe(true);
 		expect(
 			backend.history.filter((item) => item.event_id === "EV_001"),
 		).toHaveLength(2);
@@ -106,15 +109,60 @@ describe("Career Quest: исходные данные и расчёт состо
 				message.includes("недоучтён"),
 			),
 		).toBe(true);
-		record.completed_at = "2026-09-01T12:00:00.000Z";
+		record.completed_at = "2026-09-02T12:00:00.000Z";
 		validateDataset(copy);
 		expect(
 			profileFor(copy, "JURY_BACKEND_ALPHA").effective_skills.SK_PYTHON,
 		).toBe(2);
-		record.completed_at = "2026-09-01T00:00:00.000Z";
+		record.completed_at = "2026-09-01T12:00:00.000Z";
 		expect(
 			profileFor(copy, "JURY_BACKEND_ALPHA").effective_skills.SK_PYTHON,
 		).toBe(1);
+		record.completed_at = "2026-10-02T12:00:00.000Z";
+		expect(
+			profileFor(copy, "JURY_BACKEND_ALPHA").effective_skills.SK_PYTHON,
+		).toBe(1);
+	});
+
+	test("однократное мероприятие не начисляет прирост дважды, повторы клуба сохраняются", () => {
+		const copy = structuredClone(jury);
+		const employeeId = "JURY_BACKEND_ALPHA";
+		const record = copy.history.find(
+			(item) => item.record_id === "JURY_ALPHA_001",
+		)!;
+		record.completed_at = "2026-09-20T12:00:00.000Z";
+		const pythonEffect = copy.events
+			.find((item) => item.event_id === record.event_id)!
+			.develops_skills.find((effect) => effect.skill_id === "SK_PYTHON")!;
+		pythonEffect.max_level = 5;
+		copy.history.push({
+			...record,
+			record_id: "DUPLICATED_COMPLETION",
+			completed_at: "2026-09-21T12:00:00.000Z",
+		});
+		expect(profileFor(copy, employeeId).effective_skills.SK_PYTHON).toBe(2);
+		expect(
+			profileFor(copy, employeeId).history.filter(
+				(item) => item.event_id === record.event_id,
+			),
+		).toHaveLength(2);
+		const club = copy.events.find((item) => item.event_id === "EV_036")!;
+		club.develops_skills = [{ skill_id: "SK_PYTHON", gain: 1, max_level: 5 }];
+		copy.history.push(
+			{
+				...record,
+				record_id: "CLUB_FIRST",
+				event_id: club.event_id,
+				completed_at: "2026-09-22T12:00:00.000Z",
+			},
+			{
+				...record,
+				record_id: "CLUB_SECOND",
+				event_id: club.event_id,
+				completed_at: "2026-09-23T12:00:00.000Z",
+			},
+		);
+		expect(profileFor(copy, employeeId).effective_skills.SK_PYTHON).toBe(4);
 	});
 
 	test("отсутствующий навык равен нулю и превышение другого не компенсирует дефицит", () => {
@@ -145,12 +193,18 @@ describe("Career Quest: исходные данные и расчёт состо
 		);
 	});
 
-	test("исторический обязательный onboarding добавляет навык после оценки", () => {
-		const profile = profileFor(dataset, "E0058");
+	test("обязательный onboarding добавляет навык только с подтверждённой датой завершения", () => {
+		const copy = structuredClone(dataset);
+		const initial = profileFor(copy, "E0058");
+		expect(initial.effective_skills.SK_PRODUCT_KNOWLEDGE).toBeUndefined();
+		copy.history.find(
+			(record) => record.employee_id === "E0058" && record.event_id === "EV_004",
+		)!.completed_at = `${copy.as_of_date}T12:00:00.000Z`;
+		const profile = profileFor(copy, "E0058");
 		expect(profile.employee.skills.SK_PRODUCT_KNOWLEDGE).toBeUndefined();
 		expect(profile.effective_skills.SK_PRODUCT_KNOWLEDGE).toBe(1);
 		expect(
-			candidatesFor(dataset, "E0058").some(
+			candidatesFor(copy, "E0058").some(
 				(candidate) => candidate.event.event_id === "EV_004",
 			),
 		).toBe(false);

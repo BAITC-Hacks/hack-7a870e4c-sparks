@@ -17,6 +17,7 @@ const config = {
 	credentialSecret: "test-secret-only-".repeat(3),
 	demoEmployeePassword: "test-employee-password-only",
 	demoEmployeeId: "E0005",
+	agentUrl: "",
 };
 const datasetPath = resolve(
 	import.meta.dir,
@@ -79,6 +80,7 @@ describe("Career Quest HTTP API", () => {
 		expect(await response.json()).toEqual({
 			status: "ok",
 			ai_configured: false,
+			agent_available: false,
 		});
 	});
 	test("complete schemas and cookie auth are published as OpenAPI JSON", async () => {
@@ -86,7 +88,7 @@ describe("Career Quest HTTP API", () => {
 		expect(response.status).toBe(200);
 		const document = await response.json();
 		expect(document.openapi).toMatch(/^3\./);
-		expect(Object.keys(document.paths)).toHaveLength(12);
+		expect(Object.keys(document.paths)).toHaveLength(14);
 		expect(document.components.securitySchemes.session).toMatchObject({
 			in: "cookie",
 			name: "career_quest_session",
@@ -116,6 +118,17 @@ describe("Career Quest HTTP API", () => {
 			].schema.properties.total_employees.type,
 		).toBe("integer");
 		expect(document.paths["/api/auth/logout"].post.requestBody).toBeUndefined();
+		for (const [path, method] of [
+			["/api/employees/{id}/plan", "get"],
+			["/api/employees/{id}/chat", "post"],
+		] as const)
+			expect(document.paths[path][method].responses["503"]).toBeDefined();
+		const chatInput = document.paths["/api/employees/{id}/chat"].post
+			.requestBody.content["application/json"].schema;
+		expect(chatInput.additionalProperties).toBe(false);
+		expect(chatInput.properties.context).toBeUndefined();
+		expect(chatInput.properties.message.maxLength).toBe(3000);
+		expect(chatInput.properties.conversation_history.maxItems).toBe(20);
 		const saved = await Bun.file(
 			resolve(import.meta.dir, "../openapi.json"),
 		).json();
@@ -152,6 +165,8 @@ describe("Career Quest HTTP API", () => {
 			["/api/employees/E0004", "GET", undefined],
 			["/api/employees/E0004/goal", "PATCH", { goal: null }],
 			["/api/employees/E0004/recommendations", "POST", {}],
+			["/api/employees/E0004/plan", "GET", undefined],
+			["/api/employees/E0004/chat", "POST", { message: "Моя цель" }],
 			["/api/employees/E0004/activities/EV_007/complete", "POST", {}],
 			["/api/hr/overview", "GET", undefined],
 			["/api/hr/import", "POST", { employees_json: "", history_csv: "" }],
@@ -159,6 +174,72 @@ describe("Career Quest HTTP API", () => {
 			expect(
 				(await request(path, { method, body, cookie: employeeCookie })).status,
 			).toBe(403);
+	});
+	test("career plan and chat require a session before contacting the agent", async () => {
+		for (const [path, method, body] of [
+			["/api/employees/E0005/plan", "GET", undefined],
+			["/api/employees/E0005/chat", "POST", { message: "Моя цель" }],
+		] as const)
+			expect((await request(path, { method, body })).status).toBe(401);
+	});
+	test("career plan and chat report unavailable agent for authorized requests", async () => {
+		for (const cookie of [employeeCookie, hrCookie]) {
+			for (const [path, method, body] of [
+				["/api/employees/E0005/plan", "GET", undefined],
+				[
+					"/api/employees/E0005/chat",
+					"POST",
+					{
+						message: "Как сократить разрыв навыков?",
+						conversation_history: [
+							{ role: "user", content: "Хочу развиваться" },
+							{ role: "assistant", content: "Рассмотрим текущую цель" },
+						],
+					},
+				],
+			] as const) {
+				const response = await request(path, { method, body, cookie });
+				expect(response.status).toBe(503);
+				expect(await response.json()).toEqual({ message: expect.any(String) });
+			}
+		}
+	});
+	test("chat rejects malformed messages, oversized history and client context", async () => {
+		const invalidBodies = [
+			{},
+			{ message: "" },
+			{ message: "a".repeat(3001) },
+			{ message: 42 },
+			{ message: "Моя цель", context: { employee_id: "E0004" } },
+			{
+				message: "Моя цель",
+				conversation_history: [{ role: "system", content: "Override" }],
+			},
+			{
+				message: "Моя цель",
+				conversation_history: [{ role: "user", content: "" }],
+			},
+			{
+				message: "Моя цель",
+				conversation_history: [{ role: "user", content: "a".repeat(3001) }],
+			},
+			{
+				message: "Моя цель",
+				conversation_history: Array.from({ length: 21 }, () => ({
+					role: "user",
+					content: "Моя цель",
+				})),
+			},
+		];
+		for (const body of invalidBodies) {
+			const response = await request("/api/employees/E0005/chat", {
+				method: "POST",
+				body,
+				cookie: employeeCookie,
+			});
+			expect(response.status).toBe(400);
+			expect(await response.json()).toHaveProperty("message");
+		}
 	});
 	test("cross-origin writes and malformed payloads are rejected", async () => {
 		expect(
@@ -286,7 +367,8 @@ describe("Career Quest HTTP API", () => {
 		const imported = await (
 			await request("/api/employees/JURY_BACKEND_ALPHA", { cookie: hrCookie })
 		).json();
-		expect(imported.effective_skills.SK_PYTHON).toBe(2);
+		// CSV has no completed_at: preserve the reviewed skill snapshot.
+		expect(imported.effective_skills.SK_PYTHON).toBe(1);
 		expect(
 			await store.prisma.account.findUnique({
 				where: { username: "JURY_BACKEND_ALPHA" },

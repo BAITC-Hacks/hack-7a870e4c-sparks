@@ -52,13 +52,17 @@
                   "type": "object",
                   "required": [
                     "status",
-                    "ai_configured"
+                    "ai_configured",
+                    "agent_available"
                   ],
                   "properties": {
                     "status": {
                       "type": "string"
                     },
                     "ai_configured": {
+                      "type": "boolean"
+                    },
+                    "agent_available": {
                       "type": "boolean"
                     }
                   }
@@ -3044,7 +3048,7 @@
       "post": {
         "operationId": "getRecommendations",
         "summary": "Получить до трех объяснимых рекомендаций",
-        "description": "Модель выбирает только допустимые мероприятия и подтвержденные факторы. Таймаут AI до 8 секунд. При недоступности модели возвращается mode=rules. Если допустимых шагов нет, массив пуст и приведена причина.",
+        "description": "Агент выбирает только допустимые мероприятия и подтвержденные факторы из серверного контекста. При недоступности агента или модели возвращается mode=rules. Если допустимых шагов нет, массив пуст и приведена причина.",
         "tags": [
           "Career"
         ],
@@ -3471,6 +3475,1748 @@
           },
           "500": {
             "description": "Response for status 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/employees/{id}/plan": {
+      "get": {
+        "operationId": "getCareerPlan",
+        "summary": "Получить карьерный план и прогноз развития навыков",
+        "description": "Контекст профиля, каталога и истории формируется на сервере. План содержит расчетную траекторию, разрывы навыков и предупреждения; готовность не гарантирует повышение. При недоступности агента возвращается 503.",
+        "tags": [
+          "Career"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "maxLength": 128,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Response for status 200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "employee_id",
+                    "current_position",
+                    "career_goal",
+                    "goal_source",
+                    "as_of_date",
+                    "last_review_date",
+                    "effective_skills",
+                    "counted_completions",
+                    "assessment_note",
+                    "readiness",
+                    "projected_readiness",
+                    "projected_skills",
+                    "trajectory",
+                    "gaps",
+                    "recommendations",
+                    "uncovered_skills",
+                    "mandatory_tasks",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "employee_id": {
+                      "type": "string"
+                    },
+                    "current_position": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "role",
+                        "grade"
+                      ],
+                      "properties": {
+                        "role": {
+                          "type": "string"
+                        },
+                        "grade": {
+                          "type": "string",
+                          "enum": [
+                            "Junior",
+                            "Middle",
+                            "Senior",
+                            "Lead"
+                          ]
+                        }
+                      }
+                    },
+                    "career_goal": {
+                      "additionalProperties": false,
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "required": [
+                        "target_role",
+                        "target_grade"
+                      ],
+                      "properties": {
+                        "target_role": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "target_grade": {
+                          "type": "string",
+                          "enum": [
+                            "Junior",
+                            "Middle",
+                            "Senior",
+                            "Lead"
+                          ]
+                        }
+                      }
+                    },
+                    "goal_source": {
+                      "type": "string",
+                      "enum": [
+                        "explicit",
+                        "next_grade",
+                        "none"
+                      ]
+                    },
+                    "as_of_date": {
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                      "type": "string"
+                    },
+                    "last_review_date": {
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "effective_skills": {
+                      "type": "object",
+                      "patternProperties": {
+                        "^(.*)$": {
+                          "minimum": 0,
+                          "maximum": 5,
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "counted_completions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "assessment_note": {
+                      "type": "string"
+                    },
+                    "readiness": {
+                      "minimum": 0,
+                      "maximum": 100,
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "projected_readiness": {
+                      "minimum": 0,
+                      "maximum": 100,
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "projected_skills": {
+                      "type": "object",
+                      "patternProperties": {
+                        "^(.*)$": {
+                          "minimum": 0,
+                          "maximum": 5,
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "trajectory": {
+                      "maxItems": 3,
+                      "type": "array",
+                      "items": {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "event_id",
+                          "readiness_before",
+                          "readiness_after"
+                        ],
+                        "properties": {
+                          "event_id": {
+                            "type": "string"
+                          },
+                          "readiness_before": {
+                            "minimum": 0,
+                            "maximum": 100,
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "readiness_after": {
+                            "minimum": 0,
+                            "maximum": 100,
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "gaps": {
+                      "type": "array",
+                      "items": {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "skill_id",
+                          "name",
+                          "current",
+                          "required",
+                          "gap",
+                          "critical",
+                          "covered"
+                        ],
+                        "properties": {
+                          "skill_id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "current": {
+                            "minimum": 0,
+                            "maximum": 5,
+                            "type": "integer"
+                          },
+                          "required": {
+                            "minimum": 0,
+                            "maximum": 5,
+                            "type": "integer"
+                          },
+                          "gap": {
+                            "minimum": 1,
+                            "maximum": 5,
+                            "type": "integer"
+                          },
+                          "critical": {
+                            "type": "boolean"
+                          },
+                          "covered": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    },
+                    "recommendations": {
+                      "maxItems": 3,
+                      "type": "array",
+                      "items": {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "event",
+                          "score",
+                          "factors",
+                          "next_session",
+                          "gains",
+                          "in_progress",
+                          "explanation"
+                        ],
+                        "properties": {
+                          "event": {
+                            "additionalProperties": false,
+                            "type": "object",
+                            "required": [
+                              "event_id",
+                              "title",
+                              "description",
+                              "type",
+                              "format",
+                              "duration_hours",
+                              "mandatory",
+                              "target_roles",
+                              "target_grades",
+                              "develops_skills",
+                              "prerequisites",
+                              "upcoming_sessions"
+                            ],
+                            "properties": {
+                              "event_id": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string"
+                              },
+                              "type": {
+                                "type": "string"
+                              },
+                              "format": {
+                                "type": "string",
+                                "enum": [
+                                  "online",
+                                  "offline",
+                                  "self_paced"
+                                ]
+                              },
+                              "duration_hours": {
+                                "type": "number"
+                              },
+                              "mandatory": {
+                                "type": "boolean"
+                              },
+                              "target_roles": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "target_grades": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "Junior",
+                                    "Middle",
+                                    "Senior",
+                                    "Lead"
+                                  ]
+                                }
+                              },
+                              "develops_skills": {
+                                "type": "array",
+                                "items": {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "skill_id",
+                                    "gain",
+                                    "max_level"
+                                  ],
+                                  "properties": {
+                                    "skill_id": {
+                                      "type": "string"
+                                    },
+                                    "gain": {
+                                      "type": "number"
+                                    },
+                                    "max_level": {
+                                      "minimum": 0,
+                                      "maximum": 5,
+                                      "type": "integer"
+                                    }
+                                  }
+                                }
+                              },
+                              "prerequisites": {
+                                "type": "object",
+                                "patternProperties": {
+                                  "^(.*)$": {
+                                    "minimum": 0,
+                                    "maximum": 5,
+                                    "type": "integer"
+                                  }
+                                }
+                              },
+                              "upcoming_sessions": {
+                                "type": "array",
+                                "items": {
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          },
+                          "score": {
+                            "type": "number"
+                          },
+                          "factors": {
+                            "type": "array",
+                            "items": {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "id",
+                                "category",
+                                "text"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "category": {
+                                  "type": "string",
+                                  "enum": [
+                                    "grade",
+                                    "gap",
+                                    "history",
+                                    "target"
+                                  ]
+                                },
+                                "text": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          },
+                          "next_session": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "gains": {
+                            "type": "array",
+                            "items": {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "skill_id",
+                                "name",
+                                "before",
+                                "after",
+                                "target"
+                              ],
+                              "properties": {
+                                "skill_id": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "before": {
+                                  "type": "number"
+                                },
+                                "after": {
+                                  "type": "number"
+                                },
+                                "target": {
+                                  "type": "number"
+                                }
+                              }
+                            }
+                          },
+                          "in_progress": {
+                            "type": "boolean"
+                          },
+                          "explanation": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "uncovered_skills": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "mandatory_tasks": {
+                      "type": "array",
+                      "items": {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "event_id",
+                          "title",
+                          "status",
+                          "due_date"
+                        ],
+                        "properties": {
+                          "event_id": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "in_progress",
+                              "dropped",
+                              "no_show",
+                              "declined",
+                              "overdue"
+                            ]
+                          },
+                          "due_date": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response for status 400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response for status 401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response for status 403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response for status 404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response for status 409",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Response for status 413",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response for status 429",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Response for status 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Response for status 503",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/employees/{id}/chat": {
+      "post": {
+        "operationId": "chatWithCareerAdvisor",
+        "summary": "Обсудить карьерное развитие с AI-советником",
+        "description": "Клиент передает сообщение и до 20 реплик истории; контекст сотрудника формирует API после проверки доступа. Ответ включает план и рекомендации. При недоступности агента возвращается 503.",
+        "tags": [
+          "Career"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "maxLength": 128,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "message"
+                ],
+                "properties": {
+                  "message": {
+                    "minLength": 1,
+                    "maxLength": 3000,
+                    "type": "string"
+                  },
+                  "conversation_history": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "role",
+                        "content"
+                      ],
+                      "properties": {
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "user",
+                            "assistant"
+                          ]
+                        },
+                        "content": {
+                          "minLength": 1,
+                          "maxLength": 3000,
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "message"
+                ],
+                "properties": {
+                  "message": {
+                    "minLength": 1,
+                    "maxLength": 3000,
+                    "type": "string"
+                  },
+                  "conversation_history": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "role",
+                        "content"
+                      ],
+                      "properties": {
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "user",
+                            "assistant"
+                          ]
+                        },
+                        "content": {
+                          "minLength": 1,
+                          "maxLength": 3000,
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "message"
+                ],
+                "properties": {
+                  "message": {
+                    "minLength": 1,
+                    "maxLength": 3000,
+                    "type": "string"
+                  },
+                  "conversation_history": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "role",
+                        "content"
+                      ],
+                      "properties": {
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "user",
+                            "assistant"
+                          ]
+                        },
+                        "content": {
+                          "minLength": 1,
+                          "maxLength": 3000,
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response for status 200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "employee_id",
+                    "reply",
+                    "plan",
+                    "recommendations"
+                  ],
+                  "properties": {
+                    "employee_id": {
+                      "type": "string"
+                    },
+                    "reply": {
+                      "type": "string"
+                    },
+                    "plan": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "employee_id",
+                        "current_position",
+                        "career_goal",
+                        "goal_source",
+                        "as_of_date",
+                        "last_review_date",
+                        "effective_skills",
+                        "counted_completions",
+                        "assessment_note",
+                        "readiness",
+                        "projected_readiness",
+                        "projected_skills",
+                        "trajectory",
+                        "gaps",
+                        "recommendations",
+                        "uncovered_skills",
+                        "mandatory_tasks",
+                        "warnings"
+                      ],
+                      "properties": {
+                        "employee_id": {
+                          "type": "string"
+                        },
+                        "current_position": {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "role",
+                            "grade"
+                          ],
+                          "properties": {
+                            "role": {
+                              "type": "string"
+                            },
+                            "grade": {
+                              "type": "string",
+                              "enum": [
+                                "Junior",
+                                "Middle",
+                                "Senior",
+                                "Lead"
+                              ]
+                            }
+                          }
+                        },
+                        "career_goal": {
+                          "additionalProperties": false,
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "required": [
+                            "target_role",
+                            "target_grade"
+                          ],
+                          "properties": {
+                            "target_role": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "target_grade": {
+                              "type": "string",
+                              "enum": [
+                                "Junior",
+                                "Middle",
+                                "Senior",
+                                "Lead"
+                              ]
+                            }
+                          }
+                        },
+                        "goal_source": {
+                          "type": "string",
+                          "enum": [
+                            "explicit",
+                            "next_grade",
+                            "none"
+                          ]
+                        },
+                        "as_of_date": {
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "type": "string"
+                        },
+                        "last_review_date": {
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "effective_skills": {
+                          "type": "object",
+                          "patternProperties": {
+                            "^(.*)$": {
+                              "minimum": 0,
+                              "maximum": 5,
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "counted_completions": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "assessment_note": {
+                          "type": "string"
+                        },
+                        "readiness": {
+                          "minimum": 0,
+                          "maximum": 100,
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "projected_readiness": {
+                          "minimum": 0,
+                          "maximum": 100,
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "projected_skills": {
+                          "type": "object",
+                          "patternProperties": {
+                            "^(.*)$": {
+                              "minimum": 0,
+                              "maximum": 5,
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "trajectory": {
+                          "maxItems": 3,
+                          "type": "array",
+                          "items": {
+                            "additionalProperties": false,
+                            "type": "object",
+                            "required": [
+                              "event_id",
+                              "readiness_before",
+                              "readiness_after"
+                            ],
+                            "properties": {
+                              "event_id": {
+                                "type": "string"
+                              },
+                              "readiness_before": {
+                                "minimum": 0,
+                                "maximum": 100,
+                                "type": [
+                                  "number",
+                                  "null"
+                                ]
+                              },
+                              "readiness_after": {
+                                "minimum": 0,
+                                "maximum": 100,
+                                "type": [
+                                  "number",
+                                  "null"
+                                ]
+                              }
+                            }
+                          }
+                        },
+                        "gaps": {
+                          "type": "array",
+                          "items": {
+                            "additionalProperties": false,
+                            "type": "object",
+                            "required": [
+                              "skill_id",
+                              "name",
+                              "current",
+                              "required",
+                              "gap",
+                              "critical",
+                              "covered"
+                            ],
+                            "properties": {
+                              "skill_id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "current": {
+                                "minimum": 0,
+                                "maximum": 5,
+                                "type": "integer"
+                              },
+                              "required": {
+                                "minimum": 0,
+                                "maximum": 5,
+                                "type": "integer"
+                              },
+                              "gap": {
+                                "minimum": 1,
+                                "maximum": 5,
+                                "type": "integer"
+                              },
+                              "critical": {
+                                "type": "boolean"
+                              },
+                              "covered": {
+                                "type": "boolean"
+                              }
+                            }
+                          }
+                        },
+                        "recommendations": {
+                          "maxItems": 3,
+                          "type": "array",
+                          "items": {
+                            "additionalProperties": false,
+                            "type": "object",
+                            "required": [
+                              "event",
+                              "score",
+                              "factors",
+                              "next_session",
+                              "gains",
+                              "in_progress",
+                              "explanation"
+                            ],
+                            "properties": {
+                              "event": {
+                                "additionalProperties": false,
+                                "type": "object",
+                                "required": [
+                                  "event_id",
+                                  "title",
+                                  "description",
+                                  "type",
+                                  "format",
+                                  "duration_hours",
+                                  "mandatory",
+                                  "target_roles",
+                                  "target_grades",
+                                  "develops_skills",
+                                  "prerequisites",
+                                  "upcoming_sessions"
+                                ],
+                                "properties": {
+                                  "event_id": {
+                                    "type": "string"
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "description": {
+                                    "type": "string"
+                                  },
+                                  "type": {
+                                    "type": "string"
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "enum": [
+                                      "online",
+                                      "offline",
+                                      "self_paced"
+                                    ]
+                                  },
+                                  "duration_hours": {
+                                    "type": "number"
+                                  },
+                                  "mandatory": {
+                                    "type": "boolean"
+                                  },
+                                  "target_roles": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "target_grades": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "enum": [
+                                        "Junior",
+                                        "Middle",
+                                        "Senior",
+                                        "Lead"
+                                      ]
+                                    }
+                                  },
+                                  "develops_skills": {
+                                    "type": "array",
+                                    "items": {
+                                      "additionalProperties": false,
+                                      "type": "object",
+                                      "required": [
+                                        "skill_id",
+                                        "gain",
+                                        "max_level"
+                                      ],
+                                      "properties": {
+                                        "skill_id": {
+                                          "type": "string"
+                                        },
+                                        "gain": {
+                                          "type": "number"
+                                        },
+                                        "max_level": {
+                                          "minimum": 0,
+                                          "maximum": 5,
+                                          "type": "integer"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "prerequisites": {
+                                    "type": "object",
+                                    "patternProperties": {
+                                      "^(.*)$": {
+                                        "minimum": 0,
+                                        "maximum": 5,
+                                        "type": "integer"
+                                      }
+                                    }
+                                  },
+                                  "upcoming_sessions": {
+                                    "type": "array",
+                                    "items": {
+                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                      "type": "string"
+                                    }
+                                  }
+                                }
+                              },
+                              "score": {
+                                "type": "number"
+                              },
+                              "factors": {
+                                "type": "array",
+                                "items": {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "id",
+                                    "category",
+                                    "text"
+                                  ],
+                                  "properties": {
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "category": {
+                                      "type": "string",
+                                      "enum": [
+                                        "grade",
+                                        "gap",
+                                        "history",
+                                        "target"
+                                      ]
+                                    },
+                                    "text": {
+                                      "type": "string"
+                                    }
+                                  }
+                                }
+                              },
+                              "next_session": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "gains": {
+                                "type": "array",
+                                "items": {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "skill_id",
+                                    "name",
+                                    "before",
+                                    "after",
+                                    "target"
+                                  ],
+                                  "properties": {
+                                    "skill_id": {
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "before": {
+                                      "type": "number"
+                                    },
+                                    "after": {
+                                      "type": "number"
+                                    },
+                                    "target": {
+                                      "type": "number"
+                                    }
+                                  }
+                                }
+                              },
+                              "in_progress": {
+                                "type": "boolean"
+                              },
+                              "explanation": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "uncovered_skills": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "mandatory_tasks": {
+                          "type": "array",
+                          "items": {
+                            "additionalProperties": false,
+                            "type": "object",
+                            "required": [
+                              "event_id",
+                              "title",
+                              "status",
+                              "due_date"
+                            ],
+                            "properties": {
+                              "event_id": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "in_progress",
+                                  "dropped",
+                                  "no_show",
+                                  "declined",
+                                  "overdue"
+                                ]
+                              },
+                              "due_date": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            }
+                          }
+                        },
+                        "warnings": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "recommendations": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "mode",
+                        "model",
+                        "message",
+                        "recommendations",
+                        "generated_at",
+                        "duration_ms"
+                      ],
+                      "properties": {
+                        "mode": {
+                          "type": "string",
+                          "enum": [
+                            "ai",
+                            "rules"
+                          ]
+                        },
+                        "model": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "recommendations": {
+                          "maxItems": 3,
+                          "type": "array",
+                          "items": {
+                            "additionalProperties": false,
+                            "type": "object",
+                            "required": [
+                              "event",
+                              "score",
+                              "factors",
+                              "next_session",
+                              "gains",
+                              "in_progress",
+                              "explanation"
+                            ],
+                            "properties": {
+                              "event": {
+                                "additionalProperties": false,
+                                "type": "object",
+                                "required": [
+                                  "event_id",
+                                  "title",
+                                  "description",
+                                  "type",
+                                  "format",
+                                  "duration_hours",
+                                  "mandatory",
+                                  "target_roles",
+                                  "target_grades",
+                                  "develops_skills",
+                                  "prerequisites",
+                                  "upcoming_sessions"
+                                ],
+                                "properties": {
+                                  "event_id": {
+                                    "type": "string"
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "description": {
+                                    "type": "string"
+                                  },
+                                  "type": {
+                                    "type": "string"
+                                  },
+                                  "format": {
+                                    "type": "string",
+                                    "enum": [
+                                      "online",
+                                      "offline",
+                                      "self_paced"
+                                    ]
+                                  },
+                                  "duration_hours": {
+                                    "type": "number"
+                                  },
+                                  "mandatory": {
+                                    "type": "boolean"
+                                  },
+                                  "target_roles": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "target_grades": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "enum": [
+                                        "Junior",
+                                        "Middle",
+                                        "Senior",
+                                        "Lead"
+                                      ]
+                                    }
+                                  },
+                                  "develops_skills": {
+                                    "type": "array",
+                                    "items": {
+                                      "additionalProperties": false,
+                                      "type": "object",
+                                      "required": [
+                                        "skill_id",
+                                        "gain",
+                                        "max_level"
+                                      ],
+                                      "properties": {
+                                        "skill_id": {
+                                          "type": "string"
+                                        },
+                                        "gain": {
+                                          "type": "number"
+                                        },
+                                        "max_level": {
+                                          "minimum": 0,
+                                          "maximum": 5,
+                                          "type": "integer"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "prerequisites": {
+                                    "type": "object",
+                                    "patternProperties": {
+                                      "^(.*)$": {
+                                        "minimum": 0,
+                                        "maximum": 5,
+                                        "type": "integer"
+                                      }
+                                    }
+                                  },
+                                  "upcoming_sessions": {
+                                    "type": "array",
+                                    "items": {
+                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                      "type": "string"
+                                    }
+                                  }
+                                }
+                              },
+                              "score": {
+                                "type": "number"
+                              },
+                              "factors": {
+                                "type": "array",
+                                "items": {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "id",
+                                    "category",
+                                    "text"
+                                  ],
+                                  "properties": {
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "category": {
+                                      "type": "string",
+                                      "enum": [
+                                        "grade",
+                                        "gap",
+                                        "history",
+                                        "target"
+                                      ]
+                                    },
+                                    "text": {
+                                      "type": "string"
+                                    }
+                                  }
+                                }
+                              },
+                              "next_session": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "gains": {
+                                "type": "array",
+                                "items": {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "skill_id",
+                                    "name",
+                                    "before",
+                                    "after",
+                                    "target"
+                                  ],
+                                  "properties": {
+                                    "skill_id": {
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "before": {
+                                      "type": "number"
+                                    },
+                                    "after": {
+                                      "type": "number"
+                                    },
+                                    "target": {
+                                      "type": "number"
+                                    }
+                                  }
+                                }
+                              },
+                              "in_progress": {
+                                "type": "boolean"
+                              },
+                              "explanation": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "generated_at": {
+                          "type": "string"
+                        },
+                        "duration_ms": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response for status 400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response for status 401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response for status 403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response for status 404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response for status 409",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Response for status 413",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response for status 429",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Response for status 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Response for status 503",
             "content": {
               "application/json": {
                 "schema": {

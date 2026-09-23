@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
-import type { Candidate, Dataset, Event } from "../src/contracts";
+import type { Dataset, Event, Recommendations } from "../src/contracts";
 import { candidatesFor } from "../src/modules/employees/service";
-import { recommend } from "../src/modules/recommendations/service";
+import { careerContext, recommend } from "../src/modules/recommendations/service";
 
 function fixture(): Dataset {
 	const event = (id: string, duration: number): Event => ({
@@ -82,385 +82,129 @@ function fixture(): Dataset {
 	};
 }
 
-function selection(candidate: Candidate) {
+function agentResponse(data: Dataset): Recommendations {
 	return {
-		event_id: candidate.event.event_id,
-		factor_ids: candidate.factors.slice(0, 3).map((factor) => factor.id),
+		mode: "ai", model: "test-model", message: "План агента",
+		recommendations: candidatesFor(data, data.employees[0]!.employee_id).slice(0, 2).map((candidate) => ({
+			...candidate, explanation: candidate.factors.map((factor) => factor.text).join(" "),
+		})),
+		generated_at: "2026-09-23T12:00:00Z", duration_ms: 2,
 	};
 }
-
-function responseBody(value: unknown) {
-	return {
-		status: "completed",
-		output: [
-			{
-				type: "message",
-				role: "assistant",
-				status: "completed",
-				content: [{ type: "output_text", text: JSON.stringify(value) }],
-			},
-		],
-	};
-}
-
 function transport(body: unknown, status = 200) {
-	return mock(async () =>
-		Response.json(body, { status }),
-	) as unknown as typeof fetch;
+	return mock(async () => Response.json(body, { status })) as unknown as typeof fetch;
 }
+const agentUrl = "http://agent:8000";
 
-describe("career recommendations", () => {
-	test("without an API key, returns the top three eligible rule-based steps with verified explanations", async () => {
+describe("Python agent integration", () => {
+	test("uses agent choices, mode, model and explanations", async () => {
+		const data = fixture();
+		const expected = agentResponse(data);
+		expected.recommendations.reverse();
+		const result = await recommend(data, data.employees[0]!.employee_id, { agentUrl, fetch: transport(expected) });
+		expect(result).toEqual({ ...expected, duration_ms: expect.any(Number) });
+	});
+	test("sends only the authorized employee's snapshot and history", async () => {
+		const data = fixture();
+		data.employees.push({ ...data.employees[0]!, employee_id: "OTHER_EMPLOYEE" });
+		data.history.push({ ...data.history[0]!, record_id: "OTHER_HISTORY", employee_id: "OTHER_EMPLOYEE" });
+		data.history[0]!.completed_at = "2026-09-10T12:00:00Z";
+		let url: unknown;
+		let init: RequestInit | undefined;
+		const fetch = mock(async (input: unknown, options?: RequestInit) => {
+			url = input; init = options;
+			return Response.json(agentResponse(data));
+		}) as unknown as typeof globalThis.fetch;
+		await recommend(data, data.employees[0]!.employee_id, { agentUrl, fetch });
+		expect(url).toBe("http://agent:8000/api/v1/advisor/recommendations");
+		expect(init?.method).toBe("POST");
+		expect(init?.signal).toBeInstanceOf(AbortSignal);
+		expect(init?.redirect).toBe("error");
+		expect(new Headers(init?.headers).has("authorization")).toBe(false);
+		const serialized = String(init?.body);
+		for (const value of ["OTHER_EMPLOYEE", "OTHER_HISTORY", "PRIVATE_FULL_NAME", "PRIVATE_DEPARTMENT", "PRIVATE_MANAGER"])
+			expect(serialized).not.toContain(value);
+		const { context } = JSON.parse(serialized);
+		expect(context.as_of_date).toBe(data.as_of_date);
+		expect(context.employee.skills).toEqual({ SK_EXAMPLE: 1 });
+		expect(context.employee.last_review_date).toBe("2026-09-01");
+		expect(context.activity_history).toEqual([data.history[0]]);
+		expect(context.events).toEqual(data.events);
+	});
+	test("preserves agent rules fallback", async () => {
+		const data = fixture();
+		const response = { ...agentResponse(data), mode: "rules", model: null, message: "AI-подбор сейчас недоступен." };
+		const result = await recommend(data, data.employees[0]!.employee_id, { agentUrl, fetch: transport(response) });
+		expect(result.message).toBe(response.message);
+		expect(result.mode).toBe("rules");
+	});
+	test("disabled agent uses the API fallback without network", async () => {
 		const data = fixture();
 		const fetch = transport({});
-		const result = await recommend(data, data.employees[0]!.employee_id, {
-			apiKey: "",
-			fetch,
-		});
+		const result = await recommend(data, data.employees[0]!.employee_id, { fetch });
 		expect(fetch).not.toHaveBeenCalled();
 		expect(result.mode).toBe("rules");
-		expect(result.model).toBeNull();
-		expect(result.message).toContain("Ключ OpenAI не настроен");
-		expect(result.recommendations.map((item) => item.event.event_id)).toEqual([
-			"COURSE_D",
-			"COURSE_C",
-			"COURSE_B",
-		]);
-		for (const recommendation of result.recommendations) {
-			expect(
-				new Set(recommendation.factors.map((factor) => factor.category)).size,
-			).toBeGreaterThanOrEqual(3);
-			expect(recommendation.explanation).toBe(
-				recommendation.factors.map((factor) => factor.text).join(" "),
-			);
-			expect(recommendation.event.mandatory).toBe(false);
+		expect(result.recommendations).toHaveLength(3);
+		expect(result.message).toContain("Расчетный режим API");
+		for (const item of result.recommendations) {
+			expect(item.event.mandatory).toBe(false);
+			expect(new Set(item.factors.map((factor) => factor.category)).size).toBeGreaterThanOrEqual(3);
 		}
-		expect(result.duration_ms).toBeGreaterThanOrEqual(0);
-		expect(Number.isNaN(Date.parse(result.generated_at))).toBe(false);
 	});
-
-	test("validates model choices and derives explanations solely from selected facts", async () => {
-		const data = fixture();
-		const candidates = candidatesFor(data, data.employees[0]!.employee_id);
-		const selected = [selection(candidates[2]!), selection(candidates[0]!)];
-		const fetch = transport(responseBody({ recommendations: selected }));
-		const result = await recommend(data, data.employees[0]!.employee_id, {
-			apiKey: "test-key",
-			model: "test-model",
-			fetch,
-		});
-		expect(result.mode).toBe("ai");
-		expect(result.model).toBe("test-model");
-		expect(result.recommendations.map((item) => item.event.event_id)).toEqual(
-			selected.map((item) => item.event_id),
-		);
-		expect(
-			result.recommendations[0]!.factors.map((factor) => factor.id),
-		).toEqual(selected[0]!.factor_ids);
-		expect(result.recommendations[0]!.explanation).toBe(
-			candidates[2]!.factors
-				.slice(0, 3)
-				.map((factor) => factor.text)
-				.join(" "),
-		);
-	});
-
-	test("sends only allowed profile fields and eligible candidates with Responses Structured Outputs and store:false", async () => {
-		const data = fixture();
-		const candidate = candidatesFor(data, data.employees[0]!.employee_id)[0]!;
-		let capturedUrl: unknown;
-		let capturedInit: RequestInit | undefined;
-		const fetch = mock(async (url: unknown, init?: RequestInit) => {
-			capturedUrl = url;
-			capturedInit = init;
-			return Response.json(
-				responseBody({ recommendations: [selection(candidate)] }),
-			);
-		}) as unknown as typeof globalThis.fetch;
-		const result = await recommend(data, data.employees[0]!.employee_id, {
-			apiKey: "test-key",
-			model: "test-model",
-			fetch,
-		});
-		expect(result.mode).toBe("ai");
-		expect(capturedUrl).toBe("https://api.openai.com/v1/responses");
-		expect(capturedInit?.method).toBe("POST");
-		expect(capturedInit?.signal).toBeInstanceOf(AbortSignal);
-		const bodyText = String(capturedInit?.body);
-		for (const privateValue of [
-			"NEW_PRIVATE_EMPLOYEE",
-			"PRIVATE_FULL_NAME",
-			"PRIVATE_DEPARTMENT",
-			"PRIVATE_MANAGER",
-			"PRIVATE_HISTORY_ID",
-			"test-key",
-			"MANDATORY_EVENT",
-			"ALREADY_COMPLETED",
-		]) {
-			expect(bodyText).not.toContain(privateValue);
-		}
-		const body = JSON.parse(bodyText);
-		expect(body.store).toBe(false);
-		expect(body.model).toBe("test-model");
-		expect(body.text.format.type).toBe("json_schema");
-		expect(body.text.format.strict).toBe(true);
-		expect(body.text.format.schema.additionalProperties).toBe(false);
-		const input = JSON.parse(body.input[0].content);
-		expect(Object.keys(input).sort()).toEqual([
-			"candidates",
-			"gaps",
-			"grade",
-			"role",
-			"target",
-		]);
-		expect(input.candidates).toHaveLength(4);
-	});
-
-	const invalidCases: [string, (candidates: Candidate[]) => unknown][] = [
-		[
-			"unknown activity",
-			(items) => ({
-				recommendations: [{ ...selection(items[0]!), event_id: "INVENTED" }],
-			}),
-		],
-		[
-			"mandatory activity",
-			(items) => ({
-				recommendations: [
-					{ ...selection(items[0]!), event_id: "MANDATORY_EVENT" },
-				],
-			}),
-		],
-		[
-			"already completed activity",
-			(items) => ({
-				recommendations: [
-					{ ...selection(items[0]!), event_id: "ALREADY_COMPLETED" },
-				],
-			}),
-		],
-		[
-			"duplicate activities",
-			(items) => ({
-				recommendations: [selection(items[0]!), selection(items[0]!)],
-			}),
-		],
-		[
-			"more than three activities",
-			(items) => ({ recommendations: items.map(selection) }),
-		],
-		[
-			"no activities despite eligible candidates",
-			() => ({ recommendations: [] }),
-		],
-		[
-			"factor from another activity",
-			(items) => ({
-				recommendations: [
-					{
-						...selection(items[0]!),
-						factor_ids: [
-							items[1]!.factors[0]!.id,
-							...items[0]!.factors.slice(1, 3).map((factor) => factor.id),
-						],
-					},
-				],
-			}),
-		],
-		[
-			"unknown factor",
-			(items) => ({
-				recommendations: [
-					{
-						...selection(items[0]!),
-						factor_ids: [...selection(items[0]!).factor_ids, "invented-factor"],
-					},
-				],
-			}),
-		],
-		[
-			"duplicate factors",
-			(items) => ({
-				recommendations: [
-					{
-						...selection(items[0]!),
-						factor_ids: [
-							...selection(items[0]!).factor_ids,
-							items[0]!.factors[0]!.id,
-						],
-					},
-				],
-			}),
-		],
-		[
-			"fewer than three categories",
-			(items) => ({
-				recommendations: [
-					{
-						...selection(items[0]!),
-						factor_ids: items[0]!.factors
-							.slice(0, 2)
-							.map((factor) => factor.id),
-					},
-				],
-			}),
-		],
-		[
-			"free-form model explanation",
-			(items) => ({
-				recommendations: [
-					{ ...selection(items[0]!), explanation: "A promotion is guaranteed" },
-				],
-			}),
-		],
-		[
-			"extra top-level output",
-			(items) => ({
-				recommendations: [selection(items[0]!)],
-				message: "Unverified claim",
-			}),
-		],
-		["wrong selection shape", () => ({ recommendations: [null] })],
-		[
-			"wrong factor type",
-			(items) => ({
-				recommendations: [
-					{ ...selection(items[0]!), factor_ids: [null, true, 3] },
-				],
-			}),
-		],
-		["wrong root shape", () => null],
+	const invalidCases: [string, (response: Recommendations, data: Dataset) => unknown][] = [
+		["malformed shape", () => ({ reply: "bad" })],
+		["unknown event", (body) => { body.recommendations[0]!.event.event_id = "INVENTED"; return body; }],
+		["mandatory event", (body, data) => { body.recommendations[0]!.event = data.events.find((e) => e.mandatory)!; return body; }],
+		["completed event", (body, data) => { body.recommendations[0]!.event = data.events.find((e) => e.event_id === "ALREADY_COMPLETED")!; return body; }],
+		["altered event", (body) => { body.recommendations[0]!.event.title = "Changed"; return body; }],
+		["duplicate events", (body) => { body.recommendations.push(body.recommendations[0]!); return body; }],
+		["too many events", (body) => { body.recommendations.push(...body.recommendations); return body; }],
+		["missing factors", (body) => { body.recommendations[0]!.factors = []; return body; }],
+		["invented explanation", (body) => { body.recommendations[0]!.explanation = "Unverified"; return body; }],
 	];
-	for (const [name, invalid] of invalidCases) {
-		test(`falls back if the model returns ${name}`, async () => {
-			const data = fixture();
-			const candidates = candidatesFor(data, data.employees[0]!.employee_id);
-			const result = await recommend(data, data.employees[0]!.employee_id, {
-				apiKey: "test-key",
-				fetch: transport(responseBody(invalid(candidates))),
-			});
-			expect(result.mode).toBe("rules");
-			expect(result.model).toBeNull();
-			expect(result.message).toContain("не прошел проверку");
-			expect(result.recommendations.map((item) => item.event.event_id)).toEqual(
-				candidates.slice(0, 3).map((item) => item.event.event_id),
-			);
-		});
-	}
-
-	test("does not accept an incomplete response even when the text happens to contain valid JSON", async () => {
+	for (const [name, mutate] of invalidCases) test(`rejects ${name}`, async () => {
 		const data = fixture();
-		const body = responseBody({
-			recommendations: [
-				selection(candidatesFor(data, data.employees[0]!.employee_id)[0]!),
-			],
-		});
-		body.status = "incomplete";
-		const result = await recommend(data, data.employees[0]!.employee_id, {
-			apiKey: "test-key",
-			fetch: transport(body),
-		});
+		const response = mutate(structuredClone(agentResponse(data)), data);
+		const result = await recommend(data, data.employees[0]!.employee_id, { agentUrl, fetch: transport(response) });
 		expect(result.mode).toBe("rules");
 		expect(result.message).toContain("не прошел проверку");
+		expect(result.recommendations[0]!.event.event_id).toBe("COURSE_D");
 	});
-
-	test("handles refusal and malformed JSON as invalid output", async () => {
+	for (const status of [422, 500, 503]) test(`does not disclose agent ${status} bodies`, async () => {
 		const data = fixture();
-		for (const content of [
-			[{ type: "refusal", refusal: "A private provider message" }],
-			[{ type: "output_text", text: "{invalid json" }],
-		]) {
-			const fetch = transport({
-				status: "completed",
-				output: [
-					{ type: "message", role: "assistant", status: "completed", content },
-				],
-			});
-			const result = await recommend(data, data.employees[0]!.employee_id, {
-				apiKey: "test-key",
-				fetch,
-			});
+		const result = await recommend(data, data.employees[0]!.employee_id, { agentUrl, fetch: transport({ detail: "PRIVATE_PROVIDER_ERROR" }, status) });
+		expect(result.mode).toBe("rules");
+		expect(JSON.stringify(result)).not.toContain("PRIVATE_PROVIDER_ERROR");
+	});
+	test("deadline covers fetch and slow body even if abort is ignored", async () => {
+		for (const slowBody of [false, true]) {
+			const data = fixture();
+			let signal: AbortSignal | undefined;
+			const fetch = mock(async (_url: unknown, init?: RequestInit) => {
+				signal = init?.signal as AbortSignal;
+				if (!slowBody) return new Promise<Response>(() => {});
+				return { ok: true, json: () => new Promise(() => {}) } as Response;
+			}) as unknown as typeof globalThis.fetch;
+			const start = performance.now();
+			const result = await recommend(data, data.employees[0]!.employee_id, { agentUrl, fetch, timeoutMs: 10 });
 			expect(result.mode).toBe("rules");
-			expect(result.message).toContain("не прошел проверку");
-			expect(result.message).not.toContain("private provider");
+			expect(result.message).toContain("не ответил");
+			expect(signal?.aborted).toBe(true);
+			expect(performance.now() - start).toBeLessThan(500);
 		}
 	});
-
-	test("does not expose HTTP or network error details", async () => {
-		const data = fixture();
-		const failure = mock(async () => {
-			throw new Error("SECRET_PROVIDER_ERROR");
-		}) as unknown as typeof fetch;
-		for (const fetch of [
-			transport({ error: { message: "SECRET_PROVIDER_ERROR" } }, 429),
-			failure,
-		]) {
-			const result = await recommend(data, data.employees[0]!.employee_id, {
-				apiKey: "test-key",
-				fetch,
-			});
-			expect(result.mode).toBe("rules");
-			expect(result.message).toContain("OpenAI недоступен");
-			expect(JSON.stringify(result)).not.toContain("SECRET_PROVIDER_ERROR");
-		}
+	test("unknown employee fails before any agent request", async () => {
+		const fetch = transport({});
+		await expect(recommend(fixture(), "UNKNOWN", { agentUrl, fetch })).rejects.toThrow("Сотрудник не найден");
+		expect(fetch).not.toHaveBeenCalled();
 	});
-
-	test("times out and aborts even if a transport ignores the abort signal", async () => {
+	test("context reflects new goals and completions without pre-applying gains", () => {
 		const data = fixture();
-		let signal: AbortSignal | null | undefined;
-		const fetch = mock(async (_url: unknown, init?: RequestInit) => {
-			signal = init?.signal;
-			return await new Promise<Response>(() => {});
-		}) as unknown as typeof globalThis.fetch;
-		const start = performance.now();
-		const result = await recommend(data, data.employees[0]!.employee_id, {
-			apiKey: "test-key",
-			fetch,
-			timeoutMs: 15,
-		});
-		expect(result.mode).toBe("rules");
-		expect(result.message).toContain("не ответил в отведенное время");
-		expect(signal?.aborted).toBe(true);
-		expect(performance.now() - start).toBeLessThan(1_000);
-	});
-
-	test("the deadline also covers a response whose body never finishes", async () => {
-		const data = fixture();
-		const response = new Response("body");
-		response.json = async () => await new Promise(() => {});
-		const fetch = mock(
-			async () => response,
-		) as unknown as typeof globalThis.fetch;
-		const result = await recommend(data, data.employees[0]!.employee_id, {
-			apiKey: "test-key",
-			fetch,
-			timeoutMs: 15,
-		});
-		expect(result.mode).toBe("rules");
-		expect(result.message).toContain("не ответил в отведенное время");
-	});
-
-	test("explains an empty candidate set and skips the provider", async () => {
-		const data = fixture();
-		data.employees[0]!.grade = "Lead";
 		data.employees[0]!.career_goal = null;
-		const fetch = transport({});
-		const result = await recommend(data, data.employees[0]!.employee_id, {
-			apiKey: "test-key",
-			fetch,
-		});
-		expect(fetch).not.toHaveBeenCalled();
-		expect(result.mode).toBe("rules");
-		expect(result.recommendations).toEqual([]);
-		expect(result.message).toContain("цель");
-	});
-
-	test("unknown employees remain domain errors rather than AI fallback successes", async () => {
-		const data = fixture();
-		const fetch = transport({});
-		await expect(
-			recommend(data, "NOT_FOUND", { apiKey: "test-key", fetch }),
-		).rejects.toThrow();
-		expect(fetch).not.toHaveBeenCalled();
+		data.history[0]!.completed_at = "2026-09-28T12:00:00Z";
+		const context = careerContext(data, data.employees[0]!.employee_id);
+		expect(context.employee.career_goal).toBeNull();
+		expect(context.employee.skills.SK_EXAMPLE).toBe(1);
+		expect(context.activity_history[0]!.completed_at).toBe("2026-09-28T12:00:00Z");
 	});
 });
