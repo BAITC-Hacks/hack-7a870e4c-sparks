@@ -10,5 +10,7 @@ export function useEmployeeProfile(employeeId: string | null) {
     queryKey: profileKeys.detail(employeeId ?? ""),
     queryFn: () => careerProfileApi.getProfile(employeeId ?? ""),
     enabled: Boolean(employeeId),
+    meta: { requiresSession: true },
+    retry: false,
   });
 }

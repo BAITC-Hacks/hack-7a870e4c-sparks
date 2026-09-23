@@ -2,11 +2,12 @@
 
 import { AlertCircle, CheckCircle2, RotateCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { useSession } from "@/modules/auth";
+import { useCatalog } from "@/modules/catalog";
 import {
   Alert,
   AlertDescription,
@@ -31,7 +32,6 @@ import {
 } from "@/shared/components/ui";
 import { getApiErrorMessage } from "@/shared/lib/client/custom-instance";
 
-import { useCatalog } from "../../catalog/model/queries/use-catalog";
 import { mapProfileToView } from "../model/mappers/profile.mapper";
 import { useUpdateCareerGoal } from "../model/mutations/use-update-career-goal";
 import { useEmployeeProfile } from "../model/queries/use-employee-profile";
@@ -46,8 +46,10 @@ function formatDate(value: string) {
 
 export function EmployeeProfileView({
   compact = false,
+  nextStep,
 }: {
   compact?: boolean;
+  nextStep?: ReactNode;
 }) {
   const t = useTranslations("careerProfile");
   const session = useSession();
@@ -251,6 +253,8 @@ export function EmployeeProfileView({
         </Card>
       )}
 
+      {nextStep}
+
       <Card>
         <CardHeader>
           <CardTitle>{t("skillsTitle")}</CardTitle>
@@ -285,7 +289,7 @@ export function EmployeeProfileView({
         </CardContent>
       </Card>
 
-      {!compact && (
+      {
         <Card>
           <CardHeader>
             <CardTitle>{t("historyTitle")}</CardTitle>
@@ -295,28 +299,30 @@ export function EmployeeProfileView({
             {view.history.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("noHistory")}</p>
             ) : (
-              view.history.map((item, index) => (
-                <div key={item.record_id}>
-                  {index > 0 && <Separator className="mb-3" />}
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-2">
-                      <CheckCircle2 className="mt-0.5 size-4 text-accent" />
-                      <div>
-                        <p className="font-medium">{item.title}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {formatDate(item.date)} · {item.status}
-                          {item.mandatory ? ` · ${t("mandatory")}` : ""}
-                        </p>
+              view.history
+                .slice(0, compact ? 3 : undefined)
+                .map((item, index) => (
+                  <div key={item.record_id}>
+                    {index > 0 && <Separator className="mb-3" />}
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-2">
+                        <CheckCircle2 className="mt-0.5 size-4 text-accent" />
+                        <div>
+                          <p className="font-medium">{item.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatDate(item.date)} · {item.status}
+                            {item.mandatory ? ` · ${t("mandatory")}` : ""}
+                          </p>
+                        </div>
                       </div>
+                      <Badge variant="outline">{item.completion_pct}%</Badge>
                     </div>
-                    <Badge variant="outline">{item.completion_pct}%</Badge>
                   </div>
-                </div>
-              ))
+                ))
             )}
           </CardContent>
         </Card>
-      )}
+      }
     </div>
   );
 }

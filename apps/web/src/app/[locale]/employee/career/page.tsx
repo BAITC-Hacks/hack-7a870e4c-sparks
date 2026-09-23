@@ -1,4 +1,5 @@
 import { RolePage } from "@/modules/auth";
+import { CareerPlanView } from "@/modules/career-plan";
 
 export default function EmployeeCareerPage() {
   return (
@@ -6,6 +7,8 @@ export default function EmployeeCareerPage() {
       allowedRole="employee"
       titleKey="careerTitle"
       descriptionKey="careerDescription"
-    />
+    >
+      <CareerPlanView />
+    </RolePage>
   );
 }

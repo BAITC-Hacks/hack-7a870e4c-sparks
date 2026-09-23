@@ -1,5 +1,6 @@
 import { RolePage } from "@/modules/auth";
 import { EmployeeProfileView } from "@/modules/career-profile";
+import { RecommendationsSection } from "@/modules/recommendations";
 
 export default function EmployeePage() {
   return (
@@ -8,7 +9,7 @@ export default function EmployeePage() {
       titleKey="employeeTitle"
       descriptionKey="employeeDescription"
     >
-      <EmployeeProfileView compact />
+      <EmployeeProfileView compact nextStep={<RecommendationsSection />} />
     </RolePage>
   );
 }
