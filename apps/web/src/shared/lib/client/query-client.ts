@@ -6,7 +6,7 @@ export const queryClient = new QueryClient({
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
       refetchOnMount: false,
-      retry: 3,
+      retry: 1,
       gcTime: 1000 * 60 * 5,
     },
     mutations: {

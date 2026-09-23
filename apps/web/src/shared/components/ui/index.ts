@@ -14,6 +14,7 @@ export * from "./label";
 export * from "./popover";
 export * from "./radio-group";
 export * from "./select";
+export * from "./sheet";
 export * from "./separator";
 export * from "./skeleton";
 export * from "./sonner";
