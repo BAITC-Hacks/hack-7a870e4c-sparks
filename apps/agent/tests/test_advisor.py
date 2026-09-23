@@ -154,6 +154,43 @@ class RankingTests(unittest.TestCase):
 
 
 class ModelBoundaryTests(unittest.IsolatedAsyncioTestCase):
+    async def test_recommendations_request_only_event_ids_with_low_astra_reasoning(self):
+        async def structured_response(**kwargs):
+            schema = kwargs['text_format']
+            data = {'event_ids': ['design', 'speaking']}
+            if 'reply' in schema.model_fields:
+                data['reply'] = 'Unnecessary generated explanation.'
+            return SimpleNamespace(status='completed', output_parsed=schema.model_validate(data))
+
+        parse = AsyncMock(side_effect=structured_response)
+        client = SimpleNamespace(responses=SimpleNamespace(parse=parse))
+        with patch.dict('os.environ', {'OPENAI_MODEL': 'gpt-6-astra'}), \
+                patch('agent.openai_agent.get_client', return_value=client):
+            result = await recommend(advisor())
+
+        self.assertEqual(result.mode, 'ai')
+        self.assertEqual(result.model, 'gpt-6-astra')
+        self.assertEqual([r.event.event_id for r in result.recommendations], ['design', 'speaking'])
+        self.assertTrue(result.message)
+        self.assertTrue(all(len(r.factors) >= 3 and r.explanation for r in result.recommendations))
+        call = parse.call_args.kwargs
+        self.assertEqual(set(call['text_format'].model_fields), {'event_ids'})
+        self.assertEqual(call['reasoning'], {'effort': 'low'})
+        self.assertLessEqual(call['max_output_tokens'], 512)
+        self.assertNotIn('В reply', call['instructions'])
+
+    async def test_non_reasoning_model_does_not_receive_astra_reasoning_setting(self):
+        parse = AsyncMock(return_value=SimpleNamespace(
+            status='completed', output_parsed=ModelDecision(event_ids=['design'], reply='План готов.'),
+        ))
+        client = SimpleNamespace(responses=SimpleNamespace(parse=parse))
+        with patch.dict('os.environ', {'OPENAI_MODEL': 'gpt-4.1-mini'}), \
+                patch('agent.openai_agent.get_client', return_value=client):
+            result = await recommend(advisor(), 'Как развиваться?')
+        self.assertEqual(result.mode, 'ai')
+        self.assertIs(parse.call_args.kwargs['text_format'], ModelDecision)
+        self.assertNotIn('reasoning', parse.call_args.kwargs)
+
     async def test_valid_model_selection_matches_typescript_contract_and_excludes_identity(self):
         parse = AsyncMock(return_value=SimpleNamespace(
             status='completed', output_parsed=ModelDecision(event_ids=['design', 'speaking'], reply='План готов.'),

@@ -14,7 +14,9 @@
 
 Compose передаёт `OPENAI_API_KEY` и `OPENAI_MODEL` только Python-агенту. API обращается к нему по `AGENT_URL=http://agent:8000` во внутренней сети Docker; порт агента наружу не публикуется. API запускается после успешных healthcheck PostgreSQL и агента. Агент работает и без ключа, возвращая рекомендации по правилам. Наличие ключа не подтверждает доступ к модели.
 
-Добавьте `OPENAI_API_KEY` и при необходимости `OPENAI_MODEL` в корневой `.env`. Существующее имя `OPENAI_KEY` тоже работает. В Compose модель по умолчанию — `gpt-4.1-mini`. Значения для примера находятся в корневом [.env.example](../../.env.example). После изменения ключа или модели повторите команду запуска.
+Добавьте `OPENAI_API_KEY` и при необходимости `OPENAI_MODEL` в корневой `.env`. Существующее имя `OPENAI_KEY` тоже работает. В Compose модель по умолчанию — `gpt-6-astra`. Значения для примера находятся в корневом [.env.example](../../.env.example). После изменения ключа или модели повторите команду запуска.
+
+Значение `OPENAI_MODEL` из `.env` перекрывает значение по умолчанию в Compose. После изменения модели нужно пересоздать агент: `docker compose up -d --no-deps --wait agent`. После изменения его кода добавьте `--build`.
 
 ## Локальный запуск агента
 
@@ -23,7 +25,7 @@ Compose передаёт `OPENAI_API_KEY` и `OPENAI_MODEL` только Python-
 ```bash
 python3 -m venv venv
 venv/bin/pip install -r apps/agent/requirements.txt
-OPENAI_MODEL=gpt-4.1-mini venv/bin/uvicorn agent.main:app --app-dir apps --reload --host 127.0.0.1 --port 8000
+OPENAI_MODEL=gpt-6-astra venv/bin/uvicorn agent.main:app --app-dir apps --reload --host 127.0.0.1 --port 8000
 ```
 
 Агент загружает корневой `.env`. Для локально запущенного Elysia API задайте `AGENT_URL=http://127.0.0.1:8000` в его окружении. `GET /health` проверяет работу сервиса, `/docs` показывает OpenAPI. Отдельный процесс агента нужен до запуска API.
@@ -34,7 +36,7 @@ OPENAI_MODEL=gpt-4.1-mini venv/bin/uvicorn agent.main:app --app-dir apps --reloa
 
 ```bash
 docker build -t career-agent apps/agent
-docker run --rm -p 127.0.0.1:8000:8000 --env-file .env -e OPENAI_MODEL=gpt-4.1-mini career-agent
+docker run --rm -p 127.0.0.1:8000:8000 --env-file .env -e OPENAI_MODEL=gpt-6-astra career-agent
 ```
 
 Сервис слушает порт `8000` внутри контейнера. Корневой `.env` используется только при запуске и не попадает в образ. Для обращения из другого контейнера используйте имя сервиса или контейнера в общей сети Docker, а не `localhost`.
@@ -107,6 +109,10 @@ docker run --rm -p 127.0.0.1:8000:8000 --env-file .env -e OPENAI_MODEL=gpt-4.1-m
 | `duration_ms` | Время обработки запроса на подбор |
 
 Карточка соответствует `Recommendation`: `event`, `score`, `factors`, `next_session`, `gains`, `in_progress`, `explanation`. В `factors` всегда четыре категории: `grade`, `gap`, `history`, `target`. Объяснение собирается из проверенных фактов. Модель выбирает ID и порядок шагов, а уровни навыков, доступность и факторы вычисляет Python. В версии 0.2 поля `event_id` и `title` карточки перенесены в `event`, общее `reason` заменено на `factors` и `explanation`.
+
+Для обычного подбора OpenAI возвращает только `event_ids` по схеме `RecommendationSelection` с лимитом 512 выходных токенов. Генерировать повторное текстовое объяснение не требуется: факторы и пояснения карточек уже рассчитаны приложением. Чат сохраняет схему `ModelDecision` с полем `reply` и лимитом 1600 токенов. Для `gpt-6-astra` явно задан `reasoning.effort=low` ([параметры модели](https://developers.openai.com/api/docs/models/gpt-6-astra)). Общий таймаут попытки остаётся 8 секунд; при таймауте или невалидном выборе включается расчётный режим.
+
+Пустой Request Payload у `POST /api/employees/E0005/recommendations` на порту API — нормальный контракт. Elysia принимает `{}` или отсутствие тела, проверяет сессию и отправляет агенту отдельный JSON `{context: ...}` с профилем E0005, только его историей, навыками, требованиями ролей и каталогом. В браузере виден первый запрос, а второй выполняется между серверами.
 
 `POST /api/v1/advisor/plan` принимает тот же `context` и быстро возвращает план по правилам без OpenAI. Он подходит для первичной отрисовки профиля. AI-подбор можно загрузить отдельным запросом. Ошибки схемы и ссылок между данными возвращают `422`; отсутствие ключа, сбой OpenAI, отказ модели или невалидный выбор возвращают `200` с `mode: "rules"` и рабочими карточками.
 

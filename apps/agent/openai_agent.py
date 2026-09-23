@@ -13,7 +13,9 @@ from openai import APIError, AsyncOpenAI
 from pydantic import ValidationError
 
 from agent.advisor import Advisor
-from agent.schemas import Candidate, ConversationTurn, ModelDecision, Recommendations
+from agent.schemas import (
+    Candidate, ConversationTurn, ModelDecision, Recommendations, RecommendationSelection,
+)
 
 logger = logging.getLogger(__name__)
 AI_DEADLINE_SECONDS = 8.0
@@ -80,8 +82,20 @@ async def _request_decision(
     message: str | None,
     history: list[ConversationTurn],
 ) -> ModelDecision:
+    model = os.getenv("OPENAI_MODEL", "gpt-6-astra")
+    is_chat = message is not None
+    # Keep the interactive deadline without changing the configured model.
+    # https://developers.openai.com/api/docs/models/gpt-6-astra
+    options: dict[str, Any] = {}
+    if model.startswith("gpt-6-astra"):
+        options["reasoning"] = {"effort": "low"}
+    output_instruction = (
+        "В reply кратко ответь на вопрос сотрудника и объясни выбор, опираясь на factors. "
+        if is_chat else
+        "Верни только event_ids; объяснения приложение сформирует из проверенных factors. "
+    )
     response = await get_client().responses.parse(
-        model=os.getenv("OPENAI_MODEL", "gpt-6-astra"),
+        model=model,
         instructions=(
             "Ты карьерный консультант. Выбери 1–3 последовательных шага ТОЛЬКО из candidates. "
             "Если кандидатов нет, event_ids должен быть пустым. ID не повторяй. "
@@ -90,7 +104,7 @@ async def _request_decision(
             "Среди подходящих вариантов предпочитай удобный формат с лучшей историей участия. "
             "Пропуски, отказы и прекращение обучения — повод уточнить формат, а не основание судить о человеке. "
             "Не выбирай два шага, если второй уже не даёт прироста после первого. "
-            "В reply кратко ответь на вопрос сотрудника и объясни выбор, опираясь на factors. "
+            + output_instruction +
             "Числа бери из контекста. Не обещай повышение, запись или изменение данных. "
             "Автоматический next_grade называй предложенной целью. Если данных нет — уточни их. "
             "Отвечай на языке вопроса, а без вопроса — на preferred_language. "
@@ -103,13 +117,24 @@ async def _request_decision(
                 "question": message or "Подбери следующие шаги развития и объясни выбор.",
             }, ensure_ascii=False, separators=(",", ":"))},
         ],
-        text_format=ModelDecision,
-        max_output_tokens=1600,
+        text_format=ModelDecision if is_chat else RecommendationSelection,
+        max_output_tokens=1600 if is_chat else 512,
         store=False,
+        **options,
     )
     if response.status != "completed" or response.output_parsed is None:
         raise ValueError("Модель не вернула завершённый структурированный ответ")
-    return response.output_parsed
+    if is_chat:
+        return response.output_parsed
+    message_by_language = {
+        "ru": "AI подобрал следующие шаги по карьерной цели, дефицитам навыков и истории участия.",
+        "kk": "AI мансаптық мақсатқа, дағдылардағы алшақтықтарға және қатысу тарихына сүйеніп келесі қадамдарды таңдады.",
+        "en": "AI selected the next steps based on the career goal, skill gaps and participation history.",
+    }
+    return ModelDecision(
+        event_ids=response.output_parsed.event_ids,
+        reply=message_by_language.get(advisor.employee.preferred_language, message_by_language["ru"]),
+    )
 
 
 async def recommend(

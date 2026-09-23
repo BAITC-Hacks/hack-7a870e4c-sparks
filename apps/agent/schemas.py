@@ -175,7 +175,11 @@ class Recommendations(BaseModel):
     duration_ms: int
 
 
-class ModelDecision(BaseModel):
-    # Only IDs can affect recommendations; computed levels and factors stay server-owned.
+class RecommendationSelection(BaseModel):
+    # Recommendation cards already contain server-computed explanations.
     event_ids: list[str] = Field(max_length=3)
+
+
+class ModelDecision(RecommendationSelection):
+    # Free-form replies are needed only for the conversational endpoint.
     reply: str = Field(min_length=1, max_length=3000)
