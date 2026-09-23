@@ -36,6 +36,7 @@ import {
   mapCareerPlan,
 } from "../model/mappers/career-plan.mapper";
 import { useCareerPlan } from "../model/queries/use-career-plan";
+import { ChooseGoal } from "./ChooseGoal";
 
 function percentage(value: number | null, messages: CareerPlanMessages) {
   return value === null ? messages.noCalculation : `${Math.round(value)}%`;
@@ -160,19 +161,32 @@ export function CareerPlanView() {
             </CardHeader>
             <CardContent className="space-y-5">
               <div>
-                <p className="text-sm text-muted-foreground">{messages.goal}</p>
-                <p className="font-medium">
-                  {view.career_goal
-                    ? `${view.career_goal.target_role} · ${view.career_goal.target_grade}`
-                    : messages.noGoal}
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {messages.goalSource[view.goal_source]}
-                </p>
-                {!view.career_goal && (
-                  <Button asChild variant="outline" className="mt-3">
-                    <Link href="/employee/profile">{messages.editGoal}</Link>
-                  </Button>
+                {view.career_goal ? (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      {messages.goal}
+                    </p>
+                    <p className="font-medium">
+                      {view.career_goal.target_role} ·{" "}
+                      {view.career_goal.target_grade}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {messages.goalSource[view.goal_source]}
+                    </p>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-4 text-center">
+                    <ChooseGoal />
+                    <div>
+                      <p className="font-medium">{messages.noGoal}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {messages.goalSource.none}
+                      </p>
+                    </div>
+                    <Button asChild variant="outline">
+                      <Link href="/employee/profile">{messages.editGoal}</Link>
+                    </Button>
+                  </div>
                 )}
               </div>
               <div className="grid gap-5 sm:grid-cols-2">
