@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import type { ReactNode } from "react";
 import type { UserRole } from "@/entities/session";
 import {
   Card,
@@ -16,10 +17,12 @@ export function RolePage({
   allowedRole,
   titleKey,
   descriptionKey,
+  children,
 }: {
   allowedRole: UserRole;
   titleKey: string;
   descriptionKey: string;
+  children?: ReactNode;
 }) {
   const t = useTranslations("auth.pages");
   return (
@@ -33,6 +36,7 @@ export function RolePage({
             <p className="text-muted-foreground">{t(descriptionKey)}</p>
           </CardContent>
         </Card>
+        {children}
       </AppShell>
     </AuthGuard>
   );

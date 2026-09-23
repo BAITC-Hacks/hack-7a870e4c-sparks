@@ -12,6 +12,7 @@ export * from "./dialog";
 export * from "./input";
 export * from "./label";
 export * from "./popover";
+export * from "./progress";
 export * from "./radio-group";
 export * from "./select";
 export * from "./sheet";

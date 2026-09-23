@@ -1,4 +1,5 @@
 import { RolePage } from "@/modules/auth";
+import { EmployeeProfileView } from "@/modules/career-profile";
 
 export default function EmployeeProfilePage() {
   return (
@@ -6,6 +7,8 @@ export default function EmployeeProfilePage() {
       allowedRole="employee"
       titleKey="profileTitle"
       descriptionKey="profileDescription"
-    />
+    >
+      <EmployeeProfileView />
+    </RolePage>
   );
 }
