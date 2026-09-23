@@ -18,8 +18,27 @@ const healthSchema = object({ status: t.String(), ai_configured: t.Boolean(), ag
 
 export function createApp(store: Store, config: AppConfig) {
 	const auth = new AuthService(store, config);
+	const applyCors = (request: Request, set: { headers: Record<string, string> }) => {
+		const origin = request.headers.get("origin");
+		if (!origin || (origin !== config.appOrigin && origin !== new URL(request.url).origin))
+			return false;
+		set.headers["access-control-allow-origin"] = origin;
+		set.headers["access-control-allow-credentials"] = "true";
+		set.headers["access-control-allow-methods"] = "GET,HEAD,POST,PATCH,OPTIONS";
+		set.headers["access-control-allow-headers"] = "Content-Type, Authorization";
+		set.headers.vary = "Origin";
+		return true;
+	};
 	const app = new Elysia({ normalize: false, serve: { maxRequestBodySize: 18 * 1024 * 1024 } })
 		.use(createOpenApiPlugin())
+		.onRequest(({ request, set }) => {
+			if (request.method === "OPTIONS") {
+				applyCors(request, set);
+				set.status = 204;
+				return new Response(null, { status: 204 });
+			}
+			applyCors(request, set);
+		})
 		.onError({ as: "global" }, ({ error, code, set }) => {
 			if (error instanceof HttpError) {
 				set.status = error.status;
