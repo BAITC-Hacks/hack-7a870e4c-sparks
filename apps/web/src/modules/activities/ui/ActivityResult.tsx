@@ -58,17 +58,26 @@ export function ActivityResult({
       aria-live="polite"
       className="flex flex-col gap-5"
     >
-      {!result.alreadyCompleted && <ProgressSuccess className="self-center" />}
-      <Alert>
-        <CheckCircle2 aria-hidden="true" />
-        <AlertTitle>
-          <h2>
-            {t(result.alreadyCompleted ? "alreadyCompleted" : "completed")}
-          </h2>
-        </AlertTitle>
-        <AlertDescription>
-          {t(result.alreadyCompleted ? "alreadyCompletedNote" : "resultNote")}
-        </AlertDescription>
+      <Alert className="flex items-center gap-3">
+        {result.alreadyCompleted ? (
+          <CheckCircle2 aria-hidden="true" className="shrink-0" />
+        ) : (
+          <ProgressSuccess />
+        )}
+        <div className="flex min-w-0 flex-col gap-1">
+          <AlertTitle className="line-clamp-none">
+            <h2>
+              {t(result.alreadyCompleted ? "alreadyCompleted" : "completed")}
+            </h2>
+          </AlertTitle>
+          <AlertDescription>
+            <span>
+              {t(
+                result.alreadyCompleted ? "alreadyCompletedNote" : "resultNote",
+              )}
+            </span>
+          </AlertDescription>
+        </div>
       </Alert>
       <div className="flex flex-col gap-2">
         <h3 className="font-medium">{t("readiness")}</h3>

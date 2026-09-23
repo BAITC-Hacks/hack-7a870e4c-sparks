@@ -21,7 +21,7 @@ export function ProgressSuccess({
       fallbackSrc="/animations/progress-success.svg"
       autoplay={animated}
       loop={false}
-      className={cn("max-w-[96px]", className)}
+      className={cn("h-16 w-24 max-w-[96px] shrink-0", className)}
     />
   );
 }

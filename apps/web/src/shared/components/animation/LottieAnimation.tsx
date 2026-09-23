@@ -88,6 +88,12 @@ function AnimationPlayer({
           loop={loop}
           speed={speed}
           subscriptions={subscriptions}
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+          }}
           className={cn(
             "absolute inset-0 h-full w-full",
             !ready && "invisible",
