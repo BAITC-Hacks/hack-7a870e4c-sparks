@@ -47,8 +47,9 @@ pnpm g:store       # model/stores/<name>.store.ts
 
 There is no shared env facade in this frontend template.
 
-- `NEXT_PUBLIC_API_URL` — browser API base URL for axios/Orval client.
-- `ORVAL_PATH_URL` — OpenAPI schema source for Orval.
+- `API_INTERNAL_URL` — server-only backend origin for the Next.js `/api/*` proxy; defaults to `http://127.0.0.1:3001`. Rebuild production web after changing it.
+- `NEXT_PUBLIC_API_URL` — optional direct browser API origin. Leave empty to use the same-origin proxy. Compose builds with this value empty.
+- Orval reads `../../apps/api/openapi.json`; no schema URL variable is required.
 - `ANALYZE` — enables bundle analyzer when set to `true`.
 
 See `.env.example`.

@@ -19,6 +19,10 @@ COPY . .
 
 # Отключаем телеметрию Next.js во время сборки
 ENV NEXT_TELEMETRY_DISABLED=1
+# Rewrites and public variables are compiled into the Next.js build.
+ARG API_INTERNAL_URL=http://api:3001
+ENV API_INTERNAL_URL=$API_INTERNAL_URL
+ENV NEXT_PUBLIC_API_URL=""
 
 RUN pnpm run build
 

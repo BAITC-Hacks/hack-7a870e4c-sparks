@@ -1,4 +1,5 @@
 export type { ProfileData } from "./api/career-profile.api";
+export { mapProfileToView } from "./model/mappers/profile.mapper";
 export { useUpdateCareerGoal } from "./model/mutations/use-update-career-goal";
 export { profileKeys } from "./model/queries/profile.keys";
 export { useEmployeeProfile } from "./model/queries/use-employee-profile";

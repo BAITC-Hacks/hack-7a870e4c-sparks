@@ -11,10 +11,10 @@ for key in POSTGRES_PASSWORD HR_PASSWORD CREDENTIAL_SECRET DEMO_EMPLOYEE_PASSWOR
   fi
 done
 
-docker compose up --build --detach --wait --wait-timeout 120 api
-binding="$(docker compose port api 3001 | head -n 1)"
-url="http://localhost:${binding##*:}/api/docs"
-printf '\nAPI, PostgreSQL и карьерный AI-агент готовы: %s\nПароли для входа — в .env.\n' "$url"
+docker compose up --build --detach --wait --wait-timeout 180 web
+binding="$(docker compose port web 3000 | head -n 1)"
+url="http://localhost:${binding##*:}/ru/login"
+printf '\nCareer Quest, API, PostgreSQL и карьерный AI-агент готовы: %s\nПароли для входа — в .env.\n' "$url"
 if [ "${1:-}" != --no-open ] && [ "$(uname -s)" = Darwin ]; then
   open "$url"
 fi

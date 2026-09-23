@@ -12,5 +12,6 @@ export function useEmployeeProfile(employeeId: string | null) {
     enabled: Boolean(employeeId),
     meta: { requiresSession: true },
     retry: false,
+    refetchOnMount: true,
   });
 }

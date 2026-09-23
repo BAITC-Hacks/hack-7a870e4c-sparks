@@ -22,7 +22,9 @@ backend
 - OpenAPI source is `../../apps/api/openapi.json` in `orval.config.js` (the
   Career Quest API). The current config does not read `ORVAL_PATH_URL` and has
   no Petstore fallback.
-- Browser API base URL is configured with `NEXT_PUBLIC_API_URL`.
+- Browser requests use the same-origin `/api/*` proxy by default. Next.js forwards
+  them to `API_INTERNAL_URL`; `NEXT_PUBLIC_API_URL` optionally selects a separate
+  browser-visible API with configured CORS/credentials.
 - HTTP instance and wrappers live in `src/shared/lib/client/`.
 - Every API-backed module has an `api/` layer. Its functions are the only module
   boundary that imports generated axios clients and own endpoint-specific

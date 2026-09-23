@@ -1,4 +1,5 @@
 import { RolePage } from "@/modules/auth";
+import { DataImportView } from "@/modules/data-import";
 
 export default function ImportPage() {
   return (
@@ -6,6 +7,8 @@ export default function ImportPage() {
       allowedRole="hr"
       titleKey="importTitle"
       descriptionKey="importDescription"
-    />
+    >
+      <DataImportView />
+    </RolePage>
   );
 }

@@ -64,6 +64,7 @@ export function useCompleteActivity(employeeId: string) {
       queryClient.setQueryData(queryKey, profile);
       // Completion is ready now; slow AI refreshes report their own query state.
       void Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["hr-overview"] }),
         queryClient.invalidateQueries({
           queryKey: ["recommendations", employeeId],
         }),

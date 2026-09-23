@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 import { Toaster } from "@/shared/components/ui";
 import { QueryProvider } from "@/shared/providers";
@@ -21,9 +22,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Create Next App with Crystal Architecture",
-  description:
-    "This is a starter template for Next.js with Crystal Architecture.",
+  title: "Career Quest — Sparks",
+  description: "Карьерная траектория, развитие навыков и аналитика команды.",
 };
 
 export default async function LocaleLayout({
@@ -45,7 +45,9 @@ export default async function LocaleLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <QueryProvider>{children}</QueryProvider>
+          <NuqsAdapter>
+            <QueryProvider>{children}</QueryProvider>
+          </NuqsAdapter>
         </NextIntlClientProvider>
         <Toaster richColors closeButton />
       </body>

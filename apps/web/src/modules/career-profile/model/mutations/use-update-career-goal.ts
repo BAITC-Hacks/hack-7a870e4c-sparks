@@ -21,7 +21,7 @@ export function useUpdateCareerGoal(employeeId: string) {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["recommendations"] }),
         queryClient.invalidateQueries({ queryKey: ["career-plan"] }),
-        queryClient.invalidateQueries({ queryKey: ["career-advisor"] }),
+        queryClient.invalidateQueries({ queryKey: ["hr-overview"] }),
       ]);
     },
   });

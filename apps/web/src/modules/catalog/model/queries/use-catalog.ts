@@ -12,5 +12,6 @@ export function useCatalog() {
     staleTime: 5 * 60 * 1000,
     meta: { requiresSession: true },
     retry: false,
+    refetchOnMount: true,
   });
 }

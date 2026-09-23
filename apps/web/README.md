@@ -1,77 +1,31 @@
 # Career Quest — frontend
 
-Интерфейс сотрудника на Next.js объединяет стадии 3 и 4: cookie-сессия, профиль,
-карьерная цель, рекомендации, карьерный план, AI-советник и демонстрационное
-завершение активности. После завершения показываются фактические изменения
-навыков и готовности из ответа API; повторный
-запрос не начисляет прогресс снова. Доступны русский и казахский языки.
+Интерфейс сотрудника и HR на Next.js для кейса Career Quest. Сотрудник видит
+профиль, карьерную цель, дефициты навыков, рекомендации, план и советника,
+подтверждает выполнение допустимой активности и получает пересчитанный профиль.
+HR получает агрегаты, каталог сотрудников, просмотр профиля и импорт данных.
+Доступны русский и казахский языки. Данные и права проверяет API;
+демонстрационное завершение не подтверждает реальное прохождение обучения.
 
-Для локального запуска серверной части выполните `./init.sh` из корня
-репозитория, затем из `apps/web` — команды установки и запуска ниже.
-`NEXT_PUBLIC_API_URL` в локальном `.env` должен указывать на доступный API
-(по умолчанию при стандартном запуске сервера — `http://localhost:3001`).
-Учётные данные берутся из конфигурации API; секреты не хранить в Git.
+## Запуск
 
-Сценарий проверки стадии 4: войти сотрудником → `/employee` → «Подробнее»
-у доступного следующего шага → «Завершить активность» → сравнить до/после →
-вернуться к обзору и открыть профиль с обновлёнными навыками и историей.
-Повторное открытие ссылки сохраняет статус завершения, но не выдумывает старый
-снимок для сравнения. Подтверждение демонстрационное, без интеграции с LMS.
-
-План и AI-советник доступны на `/employee/career`; HR-экраны и импорт ещё не
-подключены к frontend. API не предоставляет отдельный endpoint деталей
-активности. Детали берутся из текущих рекомендаций; если шага в них нет и
-завершение ещё не сохранено, загружается карьерный план. После завершения
-прямая ссылка показывает запись истории. Дата среза берётся из каталога API.
-Подробнее: [реализация стадии 4](app-docs/api-implementation-stages.md#реализация-стадии-4).
-
-Проверки:
+Для полного приложения нужны Docker с Compose и `openssl`. Из корня репозитория:
 
 ```bash
-pnpm test:run
-pnpm exec tsc --noEmit
-pnpm lint:deps
-pnpm build
-pnpm exec playwright test tests/e2e/stage3.spec.ts tests/e2e/activity-completion.spec.ts --project=chromium --project="Mobile Chrome" --workers=2
+./init.sh
 ```
 
-Playwright-сценарии используют перехват HTTP с типизированными ответами API и
-не изменяют живые профили. Для первого запуска нужен Chromium:
-`pnpm exec playwright install chromium --only-shell`.
-До объединения веток при проверке стадии 3 прошли 108 unit/component tests,
-15 Chromium-сценариев и production build; подробности — в
-[отчёте стадии 3](app-docs/stage-3-verification.md).
-При отдельной проверке стадии 4 прошли 103 unit-теста, 16 Playwright-сценариев
-(Chromium desktop/mobile), TypeScript, dependency boundaries, сборка и Biome
-для изменённых файлов. Проверены RU/KK, reduced motion, повторное завершение,
-ошибки 401/403 и защита кеша при выходе или нескольких запросах.
-Эти результаты относятся к отдельным стадиям до объединения и не являются
-результатом повторной проверки объединённой версии.
+Скрипт запускает frontend, API, PostgreSQL и Python-агент. Страница входа —
+[http://localhost:3000/ru/login](http://localhost:3000/ru/login),
+[Swagger](http://localhost:3001/api/docs) доступен отдельно. `WEB_PORT` и
+`API_PORT` меняют внешние порты. `./init.sh --no-open` пропускает открытие
+браузера; `docker compose down` останавливает сервисы, сохраняя данные БД.
+Учетные данные создаются в корневом `.env`: `hr` / `HR_PASSWORD` и
+демонстрационный сотрудник из `DEMO_EMPLOYEE_ID` (по умолчанию `E0005`) /
+`DEMO_EMPLOYEE_PASSWORD`. Секреты не хранить в Git.
 
-Для объединённой версии прошли `pnpm test:run` (150 unit/component tests),
-`pnpm exec tsc --noEmit --incremental false`, `pnpm lint:deps`, `pnpm build` и
-54 Playwright-сценария в Chromium desktop/mobile. Biome проверил 38 изменённых
-файлов исходного кода, конфигурации и переводов. Проверены общий сценарий
-стадий 3–4, истечение сессии, переходы из плана, история и допустимый повтор
-`EV_036` на другую дату среза.
-
-Общие `pnpm lint` и `pnpm lint:unused` пока выявляют ошибки форматирования и
-неиспользуемые части исходного шаблона; эта стадия не заявляет их успешное прохождение.
-Публичное развёртывание не проверено.
-
-## Основа проекта — Crystal Architecture v2
-
-Frontend template for Next.js App Router projects with React 19, Orval,
-TanStack Query, shadcn/ui, nuqs, Zustand, Biome, Vitest and Playwright.
-
-The template is optimized for frontend applications where Next.js is the
-routing/composition shell, Orval is the generated transport layer and TanStack
-Query owns backend server-state.
-
-## Quick Start
-
-Use Node.js 24 LTS (24.14.0 or newer within 24.x) and pnpm 10.30.3, as
-declared in `package.json`. CI and Docker also use Node.js 24.
+Для разработки frontend отдельно нужны Node.js 24 LTS (от 24.14.0 в пределах
+24.x) и pnpm 10.30.3. При доступном API из `apps/web`:
 
 ```bash
 corepack enable
@@ -79,96 +33,155 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Useful commands:
+Если полный Compose уже занимает порт 3000, сначала остановите его frontend
+командой `docker compose stop web` из корня; API, БД и агент продолжат работать.
+Локальная production-сборка и запуск: `pnpm build`, затем `pnpm start`.
+
+По умолчанию браузер отправляет `/api/*` на origin frontend, Next.js
+проксирует их к `API_INTERNAL_URL` (по умолчанию `http://127.0.0.1:3001`).
+В Docker этот адрес задается при сборке как `http://api:3001`. Изменение
+адреса для production требует пересборки. `NEXT_PUBLIC_API_URL` можно оставить
+пустым; прямой адрес отдельного API требует корректных CORS и cookies.
+Образец — [.env.example](.env.example). Orval читает локальный
+[`apps/api/openapi.json`](../api/openapi.json), переменная URL схемы не нужна.
+
+## Экраны и основной сценарий
+
+Маршруты ниже указаны без префикса языка `/ru` или `/kk`.
+
+| Маршрут | Сценарий |
+| --- | --- |
+| `/login` | Вход и восстановление cookie-сессии |
+| `/employee` | Профиль, цель и допустимые следующие шаги |
+| `/employee/profile` | Навыки, разрывы, история и предупреждения |
+| `/employee/career` | Карьерный план и AI-советник |
+| `/employee/activity/[activityId]` | Детали шага, завершение и результат до/после |
+| `/hr` | Агрегаты дефицитов, участие и причины отсутствия следующего шага |
+| `/hr/employees` | Поиск, фильтры и профиль в боковой панели |
+| `/import` | Предпросмотр и атомарная отправка JSON/CSV |
+
+Сценарий сотрудника: вход → обзор → «Подробнее» у допустимого шага →
+«Завершить активность» → сравнение до/после → профиль с обновленными
+навыками и историей. Повторный запрос не начисляет прирост снова. После reload
+показана сохраненная история; старый снимок для сравнения не выдумывается.
+
+Отдельного endpoint деталей активности нет: используются текущие рекомендации,
+при необходимости карьерный план, затем сохраненная история завершения.
+Дата среза поступает из каталога API. Интерфейс не начисляет навыки локально.
+
+## HR и импорт — стадии 5/6
+
+HR-сводка использует `GET /api/hr/overview`: количество сотрудников,
+дефициты навыков, сотрудников без следующего шага с причиной от backend и
+участие по мероприятиям. Участие измеряется числом записей, включая ежегодные
+повторы обязательных мероприятий; это не рейтинг и не число уникальных людей.
+
+Каталог получает `GET /api/employees`, локально фильтрует его по поиску,
+отделу, роли и грейду. `q`, `department`, `role`, `grade` и выбранный `employee`
+хранятся в URL через nuqs. Один управляемый Sheet загружает профиль через
+существующий модуль `career-profile`. Состояния загрузки, пустого результата,
+ошибки и запрета доступа предусмотрены в UI. Эти экраны доступны только HR.
+
+Импорт поддерживает выбор или перетаскивание одного JSON и одного CSV, чтение
+UTF-8, предварительный просмотр количества записей и первых трех примеров,
+удаление/замену файлов. Можно отправить один файл. JSON должен содержать объект
+с массивом `employees`; CSV — исходные 10 колонок, необязательную `completed_at`
+и корректные кавычки. CSV допускает BOM, JSON с BOM отклоняется по правилам API.
+Проверки в браузере базовые: значения, связи и дата среза окончательно
+проверяются сервером на объединенном наборе данных.
+
+Адаптер отправляет один JSON-запрос `{ employees_json, history_csv }`.
+Frontend ограничивает суммарное содержимое и сериализованный запрос 8 МиБ;
+API сохраняет данные атомарно по `employee_id`/`record_id`. Результат показывает
+принятые профили и строки истории, включая обновления. Импорт не создает
+аккаунты и не меняет роли. Ошибка HTTP 400 показывает сообщение сервера,
+413 — лимит; при сетевой неопределенности UI предлагает проверить данные.
+Повторных автоматических попыток отправки нет.
+
+После успеха незавершенные чтения связанных данных отменяются, неактивные
+снимки удаляются, активные запросы обновляются. Это охватывает HR, каталог,
+профили, рекомендации, планы и советника. Ответ после выхода или замены
+сессии не возвращает старые данные в кеш. Изменение цели и завершение
+активности также инвалидируют HR-сводку.
+
+Для проверки жюри: войти HR → открыть сводку и профиль → `/import` → выбрать
+[`examples/jury/employees.json`](../../examples/jury/employees.json) и
+[`activity_history.csv`](../../examples/jury/activity_history.csv) → отправить →
+увидеть 2 принятых профиля и 6 строк → открыть новые профили в HR-каталоге.
+Это инструкция для повторения, а не утверждение о выполнении всех проверок.
+
+## Стек и архитектура
+
+Основа frontend — Crystal Architecture v2. Next.js 16 / React 19 отвечают за
+маршруты и UI; Tailwind CSS 4 и shadcn/ui — за компоненты; next-intl — за
+переводы; Orval/axios — за транспорт; TanStack Query — за server-state;
+nuqs — за URL-состояние. Zustand используется для временного UI-состояния.
+Backend — Bun/Elysia, PostgreSQL/Prisma и Python/FastAPI; AI-конфигурация и
+расчетные ограничения описаны в [корневом README](../../README.md).
+
+Зависимости направлены `app → modules → entities → shared`. Маршруты остаются
+тонкими; модули имеют публичный `index.ts`, hooks работают через API-адаптеры,
+адаптеры вызывают `shared/api/generated.ts`. UI не импортирует generated-клиент.
+Управляемые пользователем фильтры и выбранный профиль хранятся в URL.
+
+## Проверки и ограничения
+
+При реализации стадий 5/6 и подготовке запуска стадии 7 выполнены:
 
 ```bash
-pnpm build
-pnpm lint
-pnpm test:run
-pnpm lint:deps
-pnpm lint:unused
 pnpm orval
-pnpm g:query
-pnpm g:mutation
+pnpm exec tsc --noEmit --incremental false
+pnpm lint:deps
+pnpm build
 ```
 
-## Stack
+Orval не изменил сгенерированный клиент; TypeScript, границы зависимостей
+(230 модулей) и production build прошли. Biome прошел для 33 измененных
+TS/TSX/JSON-файлов.
+По указанию пользователя тесты в этой работе не создавались и не запускались.
+Проверки типов и сборки не подтверждают все пользовательские или ошибочные
+сценарии, живой OpenAI либо публичное развертывание.
 
-| Area | Tooling |
-| --- | --- |
-| App shell | Next.js App Router |
-| UI | React 19, shadcn/ui, Tailwind v4 |
-| Backend API | Orval-generated client |
-| Server-state | TanStack Query |
-| URL state | nuqs |
-| UI-state | Zustand |
-| Validation | Zod |
-| i18n | next-intl |
-| Quality | Biome, dependency-cruiser, Knip |
-| Tests | Vitest, React Testing Library, Playwright |
+Полный запуск `./init.sh --no-open` проверен в отдельном Compose-проекте
+`career-stage7-check` с новой БД и портами frontend 3310 / API 3311: все четыре
+контейнера достигли состояния healthy. Проверка выполнена без ключа OpenAI;
+она подтверждает локальный запуск, а не публичное развертывание или живую модель.
 
-## Core Rules
+В production-интерфейсе на порту 3310 вручную проверены вход HR, поиск `E0001`
+(1 из 200, `q` в URL), открытие профиля в Sheet, закрытие через Back с возвратом
+фокуса, восстановление через Forward и reload. Через UI отправлены JSON/CSV
+из `examples/jury`: предпросмотр показал 2 профиля и 6 строк, API подтвердил
+успешный прием 2/6. Это не проверка всех пустых и ошибочных состояний.
 
-- Dependency direction is `app -> modules -> entities -> shared`.
-- `app/` stays thin: route composition, metadata, providers and route-level
-  concerns only.
-- Modules expose public APIs through `index.ts`.
-- Scenario modules may compose other modules through public APIs.
-- `modules/*/ui` does not import `@/shared/api/generated` directly.
-- TanStack Query owns backend server-state.
-- Zustand is only for ephemeral UI-state.
-- `ui/` can be split by responsibility zones, not by `smart/dumb`.
+После импорта HR-сводка обновилась 200 → 202, поиск `JURY_` показал 2/202,
+Middle — 1/202 с `grade` в URL; `JURY_QA_BETA` открыт в панели только для
+чтения с предупреждением о `SK_TEST_DESIGN`. Визуально проверен мобильный
+список на 390 px и сохранение фильтров при RU → ҚАЗ; полный сценарий
+сотрудника пока не завершен.
 
-## Structure
+Исторические результаты до текущих изменений:
 
-```txt
-src/
-├── app/
-├── modules/
-│   └── users/
-│       ├── model/
-│       │   ├── queries/
-│       │   ├── mutations/
-│       │   └── stores/
-│       ├── ui/
-│       └── index.ts
-├── entities/
-│   └── user/
-│       ├── model/
-│       ├── lib/
-│       ├── ui/
-│       └── index.ts
-├── shared/
-│   ├── api/
-│   ├── components/ui/
-│   ├── lib/client/
-│   ├── hooks/
-│   ├── providers/
-│   ├── configs/i18/
-│   ├── consts/
-│   └── types/
-└── styles/
-```
+- Стадия 3 отдельно: 108 unit/component tests, 15 Chromium-сценариев и сборка;
+  подробнее — [отчет стадии 3](app-docs/stage-3-verification.md).
+- Стадия 4 отдельно: 103 unit-теста, 16 Playwright-сценариев, TypeScript,
+  границы зависимостей, сборка и Biome измененных файлов.
+- Объединение стадий 3/4: 150 unit/component tests, 54 Playwright-сценария
+  Chromium desktop/mobile, TypeScript, границы зависимостей, сборка и Biome
+  38 измененных файлов.
 
-## Data Flow
+Исторические Playwright-сценарии перехватывают HTTP с типизированными ответами;
+они не проверяют текущие стадии 5/6 и не доказывают работу живого API.
+Общие `pnpm lint` и `pnpm lint:unused` сохраняют ранее отмеченные ошибки
+форматирования и неиспользуемые части исходного шаблона; успешное прохождение
+этих команд не заявляется. Серверная фильтрация и пагинация HR не реализованы.
+Публичная ссылка пока не предоставлена. Используются только синтетические
+данные в рамках хакатона; реальные персональные данные запрещены.
 
-```txt
-UI component
-↓
-module model query/mutation hook
-↓
-shared/api/generated
-↓
-backend
-```
+## Документация
 
-User-controlled navigation state belongs in the URL through `nuqs`. For shadcn
-overlays opened from tables/lists, prefer one controlled Dialog/Sheet driven by
-a selected ID in the URL.
-
-## Documentation
-
-- [Architecture](app-docs/architecture.md)
-- [Module Structure](app-docs/module-structure.md)
-- [Data Flow](app-docs/data-flow.md)
-- [Tooling](app-docs/tooling.md)
+- [Архитектура](app-docs/architecture.md)
+- [Структура модулей](app-docs/module-structure.md)
+- [Поток данных](app-docs/data-flow.md)
+- [Инструменты](app-docs/tooling.md)
+- [Стадии API-интеграции](app-docs/api-implementation-stages.md)
+- [Источники внешних материалов](../../docs/external-materials.md)
