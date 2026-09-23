@@ -1,0 +1,71 @@
+{
+  "meta": {
+    "dataset": "Career Quest",
+    "version": "1.0",
+    "as_of_date": "2026-10-01"
+  },
+  "employees": [
+    {
+      "employee_id": "JURY_BACKEND_ALPHA",
+      "full_name": "Синтетический профиль — Backend Alpha",
+      "department": "Synthetic Import Examples",
+      "role": "Backend Engineer",
+      "grade": "Junior",
+      "manager_id": "E0050",
+      "hire_date": "2025-01-01",
+      "tenure_months": 21,
+      "work_format": "hybrid",
+      "preferred_language": "ru",
+      "career_goal": {
+        "target_role": "Backend Engineer",
+        "target_grade": "Middle"
+      },
+      "skills": {
+        "SK_PYTHON": 1,
+        "SK_SQL": 2,
+        "SK_API_DESIGN": 1,
+        "SK_SYSTEM_DESIGN": 1,
+        "SK_CLOUD": 1,
+        "SK_CONTAINERS": 1,
+        "SK_CICD": 1,
+        "SK_APP_SECURITY": 1,
+        "SK_COMMUNICATION": 2,
+        "SK_TEAMWORK": 2,
+        "SK_PROBLEM_SOLVING": 2
+      },
+      "last_review_date": "2026-09-01"
+    },
+    {
+      "employee_id": "JURY_QA_BETA",
+      "full_name": "Синтетический профиль — QA Beta",
+      "department": "Synthetic Import Examples",
+      "role": "QA Engineer",
+      "grade": "Middle",
+      "manager_id": "E0063",
+      "hire_date": "2025-01-01",
+      "tenure_months": 21,
+      "work_format": "remote",
+      "preferred_language": "ru",
+      "career_goal": {
+        "target_role": "QA Engineer",
+        "target_grade": "Senior"
+      },
+      "skills": {
+        "SK_TEST_DESIGN": 2,
+        "SK_TEST_AUTOMATION": 3,
+        "SK_API_TESTING": 4,
+        "SK_LOAD_TESTING": 3,
+        "SK_JAVA": 3,
+        "SK_SQL": 3,
+        "SK_CICD": 3,
+        "SK_COMMUNICATION": 3,
+        "SK_TEAMWORK": 3,
+        "SK_CRITICAL_THINKING": 4,
+        "SK_WRITTEN_COMMUNICATION": 3,
+        "SK_MENTORING": 3,
+        "SK_LEADERSHIP": 2
+      },
+      "last_review_date": "2026-09-01"
+    }
+  ]
+}

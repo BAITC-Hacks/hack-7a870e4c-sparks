@@ -1,0 +1,14 @@
+.git
+**/node_modules
+**/generated
+**/.idea
+**/.agents
+**/.next
+**/.env*
+.local
+data
+**/test-results
+**/playwright-report
+**/coverage
+**/*.tsbuildinfo
+*.docx

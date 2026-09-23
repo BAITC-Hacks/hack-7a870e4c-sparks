@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model DatasetMeta {
+  key   String @id
+  value Json
+}
+
+model Employee {
+  id       String    @id
+  payload  Json
+  history  History[]
+  accounts Account[]
+}
+
+model Event {
+  id      String    @id
+  payload Json
+  history History[]
+}
+
+model Skill {
+  id      String @id
+  payload Json
+}
+
+model RoleProfile {
+  role    String
+  grade   String
+  payload Json
+
+  @@id([role, grade])
+}
+
+model History {
+  id         String   @id
+  employeeId String
+  eventId    String
+  date       String
+  payload    Json
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([employeeId, eventId, date])
+  @@index([eventId])
+}
+
+enum AccountRole {
+  employee
+  hr
+}
+
+model Account {
+  username     String      @id
+  passwordHash String
+  role         AccountRole
+  employeeId   String?
+  employee     Employee?   @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  sessions     Session[]
+
+  @@index([employeeId])
+}
+
+model Session {
+  tokenHash String   @id
+  username  String
+  expiresAt DateTime
+  account   Account  @relation(fields: [username], references: [username], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([username])
+  @@index([expiresAt])
+}
