@@ -1,0 +1,71 @@
+---
+alwaysApply: true
+---
+
+# Project Testing Rules
+
+## General Principles
+
+- All tests must be written in **TypeScript**.
+- Tests are stored **next to the code** inside `__tests__` folders, using the suffix `.test.ts(x)`.
+- End-to-end (e2e) tests are stored in a dedicated `tests/e2e` folder at the project root.
+- Main tools used:
+  - **Vitest** — unit and integration tests.
+  - **React Testing Library (RTL)** — component (UI) tests.
+  - **Playwright** — e2e tests.
+
+## Types of Tests
+
+**Unit Tests**
+
+- Test individual functions, hooks, or utilities.
+- Example: `utils/formatDate.ts` → `__tests__/formatDate.test.ts`.
+
+**Integration Tests**
+
+- Test how multiple modules/components work together.
+- Example: `features/auth/hooks/useLogin.ts` + API mock → `__tests__/useLogin.test.ts`.
+
+**Component Tests (RTL)**
+
+- Test UI rendering and user interactions with React components.
+- Example: `components/Button.tsx` → `__tests__/Button.test.tsx`.
+
+**E2E Tests (Playwright)**
+
+- Test the application flow as a whole.
+- Example: signup → login → navigate to profile.
+
+## What to Test
+
+**REQUIRED Tests:**
+
+- **Module UI** in `modules/*/ui/` - Test rendering, props and user interactions.
+- **Entity UI** in `entities/*/ui/` - Test reusable presentational behavior.
+- **Query/mutation hooks** in `modules/*/model/queries` and `modules/*/model/mutations` - Test query options, mutation behavior, invalidation and mapping.
+- **Pure utilities** in `entities/*/lib`, `modules/*/lib` and `shared/lib` - Test data transformations and edge cases.
+
+**NOT REQUIRED Tests:**
+
+- **Types** - TypeScript types are compile-time only.
+- **Simple constants/messages** - Static data does not need direct tests.
+- **Generated API client** in `shared/api/generated.ts` - Do not edit or unit-test generated output directly.
+- **Simple Zod schemas** - Test only when validation rules contain non-trivial business behavior.
+
+## Test Writing Style
+
+- Use `describe` blocks for grouping tests.
+- Tests must be **clear, isolated, and independent**.
+- Use mocks (`vi.mock`) for API calls or dependencies.
+- UI tests must follow RTL best practices: `screen`, `userEvent`, `findByRole`.
+- Все названия и описания тестов должны быть написаны на русском языке.
+  - Тексты в `describe`, `it` и `test` — только на русском.
+  - Требование распространяется на все типы тестов: unit, component, integration и e2e.
+
+# 🚦 TDD Rule (Test-Driven Development)
+
+1. **Write tests first** (define the expected behavior).
+2. **Then implement the component or logic** to make the tests pass.
+3. Run the test suite (`pnpm test:run`).
+4. **Fix the code until all tests are green**.
+5. Repeat the cycle whenever new functionality is introduced.

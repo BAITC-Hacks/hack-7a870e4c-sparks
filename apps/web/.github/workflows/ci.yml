@@ -1,0 +1,56 @@
+name: Continuous Integration
+
+on:
+  pull_request:
+    branches: [main, master]
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Biome Linter & Formatter
+        run: pnpm exec biome check .
+
+      - name: Check Architectural Boundaries
+        run: pnpm lint:deps
+
+      - name: Check for Unused Code & Dependencies (Knip)
+        run: pnpm lint:unused
+
+      - name: Run Unit & Component Tests
+        run: pnpm test:run
+
+      - name: Build Application (Production Check)
+        env:
+          NEXT_PUBLIC_API_URL: https://jsonplaceholder.typicode.com/
+          API_URL: https://jsonplaceholder.typicode.com/
+        run: pnpm build

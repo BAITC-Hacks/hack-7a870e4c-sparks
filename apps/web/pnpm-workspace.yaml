@@ -1,0 +1,11 @@
+overrides:
+  # Keep transitive dependencies on patched releases within their existing majors.
+  '@scalar/json-magic>undici': ^7.29.1
+  'rollup@4': ^4.63.4
+
+allowBuilds:
+  '@parcel/watcher': true
+  '@swc/core': true
+  '@tailwindcss/oxide': true
+  esbuild: true
+  sharp: true

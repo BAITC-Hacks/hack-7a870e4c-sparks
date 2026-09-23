@@ -1,0 +1,78 @@
+---
+alwaysApply: true
+---
+
+# File And Folder Naming Rules
+
+Use the naming style already established in this template.
+
+## Folders
+
+- Segment folders use kebab-case or established architecture names:
+  - `modules/users/model/queries`
+  - `modules/users/model/mutations`
+  - `modules/users/model/stores`
+  - `modules/users/ui/table`
+  - `modules/users/ui/form`
+  - `modules/users/ui/states`
+  - `entities/user/model`
+  - `shared/lib/client`
+- Do not create per-hook folders like `use-user/useUser.ts`.
+- Do not use `smart`, `dumb`, `containers`, `components` or `widgets` as
+  default folders inside module `ui/`.
+
+## Components
+
+- React component files use PascalCase:
+  - `UserProfile.tsx`
+  - `UserAvatar.tsx`
+  - `UserCard.tsx`
+- Exported component identifiers also use PascalCase.
+- Stories follow the component file name:
+  - `UserAvatar.stories.tsx`
+- In large module `ui/` folders, group components by responsibility zones:
+  - `table`
+  - `form`
+  - `dialog`
+  - `sheet`
+  - `drawer`
+  - `filters`
+  - `states`
+  - `content`
+  - `toolbar`
+  - `parts`
+- Keep the main scenario component at the top level of `ui/` when useful for
+  discoverability.
+
+## Hooks
+
+- Hook files use kebab-case and start with `use-`:
+  - `use-update-user.ts`
+  - `use-user-permissions.ts`
+  - `use-url-filter.ts`
+- Exported hook identifiers use camelCase and start with `use`:
+  - `useUpdateUser`
+  - `useUserPermissions`
+  - `useUrlFilter`
+- Query hooks live in `model/queries`.
+- Mutation hooks live in `model/mutations`.
+- Generate query hooks with `pnpm g:query`.
+- Generate mutation hooks with `pnpm g:mutation`.
+- Generic shared hooks live in `shared/hooks`.
+
+## Model Files
+
+- Query keys: `*.keys.ts`, usually inside `model/queries`.
+- Zustand stores: `*.store.ts`, inside `model/stores`.
+- Messages: `*.messages.ts`.
+- Mappers: `*.mapper.ts`, inside `model/mappers` when needed.
+- Constants: `*.constants.ts`.
+- Schemas: `*.schema.ts`.
+
+## Tests
+
+- Tests are colocated in a `__tests__` folder next to the code being tested.
+- Test files use `.test.ts` or `.test.tsx`.
+- Keep the tested file name in the test name:
+  - `use-update-user.test.ts`
+  - `UserAvatar.test.tsx`

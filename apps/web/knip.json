@@ -1,0 +1,33 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "project": ["src/**/*.{ts,tsx}"],
+  "entry": [
+    "src/shared/configs/i18/request.ts",
+    "src/shared/configs/i18/navigation.ts",
+    "src/shared/hooks/index.tsx",
+    "src/styles/globals.css"
+  ],
+  "ignore": [
+    "src/shared/api/generated.ts",
+    "src/modules/**/model/**/*.store.ts"
+  ],
+  "ignoreIssues": {
+    "src/shared/components/ui/**": ["exports", "types"],
+    "src/entities/**/index.ts": ["exports", "types"],
+    "src/entities/**/model/**": ["exports", "types"],
+    "src/modules/**/index.ts": ["exports", "types"],
+    "src/modules/**/model/**": ["exports", "types"],
+    "src/shared/configs/**": ["exports", "types"],
+    "src/shared/types/**": ["files", "exports", "types"],
+    "src/shared/hooks/**": ["files", "exports"]
+  },
+  "ignoreDependencies": [
+    "@hookform/resolvers",
+    "react-hook-form",
+    "nuqs",
+    "zustand",
+    "@storybook/react",
+    "@testing-library/user-event",
+    "ts-node"
+  ]
+}

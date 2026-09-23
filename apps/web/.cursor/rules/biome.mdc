@@ -1,0 +1,107 @@
+---
+alwaysApply: true
+---
+
+# Biome Rules & Code Quality
+
+## General Principles
+
+- All code must follow **Biome** linter and formatter rules (see `biome.json`)
+- Use **Biome** for both linting and formatting (single tool)
+- Follow **JSDoc** standards for documentation (recommended; not enforced by Biome)
+- Maintain **import sorting** via Biome's organizeImports
+
+## Biome Configuration
+
+Configuration is in **biome.json** at the project root. Run `pnpm run lint` for check (lint + format + organize imports) and `pnpm run format` to format and organize imports.
+
+### Import Sorting
+
+Biome's **organizeImports** sorts imports by built-in order:
+
+- External libraries (e.g. React, Next.js, third-party)
+- Node/built-in modules
+- Absolute imports (e.g. `@/shared`, `@/modules`)
+- Relative imports (`./`, `../`)
+
+Custom groups (e.g. separate blocks for external vs `@/` vs relative) are not configurable in Biome; the tool applies its default order. For `src/shared/**` organizeImports is disabled via overrides in `biome.json`.
+
+Type imports and value imports are handled by Biome's rules; keep imports consistent with the organized result.
+
+```typescript
+// Example: typical order after organizeImports
+import React from "react";
+import { NextRequest } from "next/server";
+import { z } from "zod";
+
+import { UserProfile, useUpdateUser } from "@/modules/users";
+import { Button } from "@/shared/components/ui/button";
+
+import { userKeys } from "../model/queries/user.keys";
+```
+
+### JSDoc (Recommendation Only)
+
+Biome does not enforce JSDoc. As a **manual** guideline, use JSDoc for:
+
+- Public functions and hooks
+- Complex utility functions
+- Component props interfaces
+- API endpoints and data fetching functions
+
+**JSDoc format (recommended):**
+
+````typescript
+/**
+ * Brief description of the function
+ *
+ * @param paramName - Description of parameter
+ * @returns Description of return value
+ * @throws {ErrorType} When this error occurs
+ * @example
+ * ```typescript
+ * const result = functionName(param1, param2);
+ * ```
+ */
+````
+
+### Code Quality
+
+- No unused variables or imports (Biome: `noUnusedVariables`, etc.)
+- Consistent naming (camelCase for functions, PascalCase for components)
+- Proper TypeScript types (avoid `any`; Biome: `noExplicitAny` as warn)
+- Error handling for async operations
+- Accessibility attributes for UI components (Biome a11y rules)
+
+### File Organization
+
+Keep a clear import structure: external first, then internal (`@/`), then relative. Align with Biome's organizeImports output.
+
+### Error Handling
+
+- Always handle errors in async operations
+- Use proper error types instead of generic Error
+- Log errors appropriately (console.error in development)
+- Provide user-friendly error messages
+
+### Performance
+
+- Use React.memo for expensive components
+- Use useMemo/useCallback for expensive calculations
+- Avoid inline object/function creation in render
+- Lazy load heavy components when possible
+
+### Accessibility
+
+- Use semantic HTML elements
+- Add ARIA labels where needed
+- Ensure keyboard navigation works
+- Provide alt text for images
+- Use proper heading hierarchy (h1, h2, h3...)
+
+## Limitations (No Biome Equivalent)
+
+- **JSDoc:** Biome has no rules for require-jsdoc, check-param-names, etc. JSDoc remains a manual guideline.
+- **SonarJS-style rules:** No direct equivalent for cognitive-complexity limit, no-duplicate-string, no-identical-functions, etc. Biome's complexity group covers some related ideas only.
+- **Storybook:** No Storybook-specific lint rules in Biome.
+- **Custom import groups:** Only Biome's default import order and path overrides (enable/disable organizeImports) are available.

@@ -1,0 +1,232 @@
+---
+alwaysApply: true
+---
+
+# Project Architecture Rules
+
+The project is a frontend template built with Next.js App Router, React,
+Orval-generated REST client and TanStack Query. It follows an adapted Crystal
+Architecture focused on layer boundaries, public APIs and client-side
+server-state management.
+
+## Layers
+
+Dependency direction is always:
+
+```txt
+app → modules → entities → shared
+```
+
+- `app/` is a thin Next.js composition layer: routing, layouts, metadata,
+  providers, route params, redirects and page composition.
+- `modules/` contains base business areas and scenario modules: feature UI,
+  query/mutation hooks, scenario rules and local UI state.
+- `entities/` contains reusable domain building blocks: schemas, types,
+  constants, pure utilities and presentational entity UI.
+- `shared/` contains infrastructure: design system, generated API client,
+  axios/query client, providers, generic hooks, i18n configs, consts and types.
+
+## Import Boundaries
+
+- A module inside `src/modules/x` may import `src/modules/y` only through
+  `@/modules/y` and only for deliberate scenario composition.
+- `entities` must not import from `modules` or `app`.
+- `shared` must not import from `entities`, `modules` or `app`.
+- Any import of another module/entity from outside must go through public API:
+  - `@/modules/x`
+  - `@/entities/x`
+- Direct imports to internal files of another module/entity are forbidden.
+- Module dependencies must stay one-way and must not form cycles.
+- Run `pnpm lint:deps` to check dependency boundaries.
+
+## Module Structure
+
+Segments are created on demand:
+
+```txt
+src/modules/{moduleName}/
+├── model/
+│   ├── queries/      # useQuery hooks and query keys
+│   ├── mutations/    # useMutation hooks, invalidation, optimistic updates
+│   ├── stores/       # Zustand ephemeral UI state
+│   ├── mappers/      # DTO → domain/view model mapping
+│   ├── constants/    # scenario constants
+│   └── permissions/  # scenario permissions and checks
+├── ui/               # scenario components, split by responsibility zones when needed
+├── api/              # optional manual transport adapter only
+├── lib/              # pure module-local utilities
+└── index.ts          # module public API
+```
+
+For a small module, a flatter `model/` is acceptable. When hooks become
+noticeable, group by role with `queries/`, `mutations/` and `stores/`. Do not
+use `model/hooks` as the default structure because it groups by technical form
+instead of architectural role.
+
+## UI Structure
+
+Keep `ui/` flat for small modules. When it grows, split it by responsibility
+zones, not by smart/dumb or container/component categories.
+
+Recommended shape:
+
+```txt
+ui/
+├── ItemDetailsDialog.tsx  # main public scenario component
+├── content/
+├── table/
+├── form/
+├── dialog/
+├── sheet/
+├── drawer/
+├── filters/
+├── states/
+├── toolbar/
+└── parts/
+```
+
+Rules:
+
+- Keep the main scenario component at the top level of `ui/` when that improves
+  discoverability.
+- Put smaller pieces into responsibility zones such as `table`, `form`,
+  `content`, `states`, `filters`, `toolbar` or overlay-specific folders.
+- Use `parts` only for small module-local pieces that do not fit a more precise
+  zone.
+- Do not create `smart`, `dumb`, `containers`, `components`, `widgets` folders
+  as the default split.
+- Move reusable presentational pieces used by multiple modules to `entities`
+  or `shared`.
+
+## Base Modules And Scenario Modules
+
+- Base modules own one business area: `items`, `activity-log`, `related-records`.
+- Scenario modules compose multiple base modules into a user workflow:
+  `item-details`, `item-directory`.
+
+Example:
+
+```txt
+app/items/page.tsx
+↓
+modules/item-directory
+├── modules/items
+└── modules/item-details
+    ├── modules/items
+    ├── modules/activity-log
+    └── modules/related-records
+```
+
+Scenario module dependencies are valid when they go through public APIs, stay
+one-way, avoid cycles and represent a real user workflow. Do not create a
+scenario module for every small component.
+
+## Data Flow
+
+Default data flow:
+
+```txt
+UI component
+↓
+module model query/mutation hook
+↓
+shared/api/generated
+↓
+backend
+```
+
+Rules:
+
+- Orval output lives in `src/shared/api/generated.ts`.
+- Module UI must not import `@/shared/api/generated` directly.
+- `app/` routes must not import `@/shared/api/generated` directly.
+- Generated API calls are wrapped by hooks/mappers in:
+  - `modules/x/model/queries`
+  - `modules/x/model/mutations`
+  - `modules/x/api` only when a manual transport adapter is needed.
+- Do not create module `api/` just to re-export generated functions.
+- `modules/x/api` is only for composite requests, uploads/downloads,
+  SSE/WebSocket, polling adapters, legacy endpoints or complex transport
+  mapping.
+
+## TanStack Query And Zustand
+
+- Server-state from the backend belongs in TanStack Query.
+- `useQuery` hooks live in `model/queries`.
+- `useMutation` hooks live in `model/mutations`.
+- Query keys live next to queries in `model/queries`.
+- Invalidation, optimistic updates and mutation-specific mapping live in
+  `model/mutations`.
+- Zustand stores live in `model/stores` and are only for ephemeral UI state.
+- Zustand must not duplicate server data, lists, profiles or details.
+
+Use Zustand for:
+
+- modal/drawer open state;
+- selected IDs for sidebars/details;
+- wizard steps;
+- temporary local drafts before submission.
+
+## Entity Rules
+
+`entities/*` can contain:
+
+- `model/` — zod schemas, TypeScript types, domain constants;
+- `lib/` — pure domain utilities;
+- `ui/` — presentational entity components;
+- `index.ts` — public API.
+
+Entities must not contain API calls, query hooks, mutation hooks, Zustand
+stores or feature-specific scenario logic.
+
+## Shared Rules
+
+`shared` must stay infrastructure-only:
+
+```txt
+src/shared/
+├── api/            # Orval generated client
+├── components/ui/  # design system
+├── lib/client/     # axios, query client, custom mutation helpers
+├── hooks/          # generic hooks
+├── providers/      # global providers
+├── configs/i18/    # i18n configs
+├── consts/         # global constants
+└── types/          # global types
+```
+
+If code knows business meaning, it does not belong in `shared`.
+
+## Environment Variables
+
+Do not add a shared env facade to this frontend template.
+
+- Browser API base URL: `process.env.NEXT_PUBLIC_API_URL` in
+  `shared/lib/client/axios-client.ts`.
+- OpenAPI source for Orval: `process.env.ORVAL_PATH_URL` in `orval.config.js`.
+- Bundle analyzer flag: `process.env.ANALYZE` in `next.config.ts`.
+
+## Public API
+
+Each module/entity exposes only the intended external surface through
+`index.ts`.
+
+Example:
+
+```ts
+export { UserProfile } from "./ui/UserProfile";
+export { useUpdateUser } from "./model/mutations/use-update-user";
+export { userKeys } from "./model/queries/user.keys";
+```
+
+## Component Coupling
+
+Prefer event callbacks over direct knowledge of parent scenarios.
+
+- A table/list component reports events: `onItemClick(itemId)`.
+- A scenario parent decides what the event means: URL update, dialog open,
+  navigation, analytics.
+- Base components should not know which dialog, sheet or route will react to
+  the event.
+- For shadcn overlays used from lists/tables, prefer one controlled overlay in
+  the scenario parent instead of one overlay instance per row.
