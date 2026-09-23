@@ -12,12 +12,13 @@ import {
 	createRecommendationsModule,
 } from "./modules/recommendations";
 import { HrService, createHrModule } from "./modules/hr";
+import { agentHealth } from "./modules/recommendations/service";
 
-const healthSchema = object({ status: t.String(), ai_configured: t.Boolean() });
+const healthSchema = object({ status: t.String(), ai_configured: t.Boolean(), agent_available: t.Boolean() });
 
 export function createApp(store: Store, config: AppConfig) {
 	const auth = new AuthService(store, config);
-	const app = new Elysia({ serve: { maxRequestBodySize: 18 * 1024 * 1024 } })
+	const app = new Elysia({ normalize: false, serve: { maxRequestBodySize: 18 * 1024 * 1024 } })
 		.use(createOpenApiPlugin())
 		.onError({ as: "global" }, ({ error, code, set }) => {
 			if (error instanceof HttpError) {
@@ -58,7 +59,7 @@ export function createApp(store: Store, config: AppConfig) {
 			"/api/health",
 			async () => {
 				await store.prisma.$queryRaw`SELECT 1`;
-				return { status: "ok", ai_configured: Boolean(config.openaiApiKey) };
+				return { status: "ok", ...await agentHealth(config.agentUrl) };
 			},
 			{
 				response: { 200: healthSchema, ...errorResponses },

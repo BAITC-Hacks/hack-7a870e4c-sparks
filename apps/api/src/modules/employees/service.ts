@@ -62,8 +62,7 @@ export function profileFor(dataset: Dataset, employeeId: string): Profile {
 	const records = historyFor(dataset, employeeId);
 	const effective: Record<string, number> = { ...employee.skills };
 	const warnings: string[] = [];
-	const cutoff = `${dataset.as_of_date}T23:59:59.999Z`;
-	const baseline = `${employee.last_review_date}T00:00:00.000Z`;
+	const counted = new Set<string>();
 	for (const record of [...records].sort(
 		(a, b) =>
 			completionKey(a).localeCompare(completionKey(b)) ||
@@ -72,10 +71,21 @@ export function profileFor(dataset: Dataset, employeeId: string): Profile {
 		if (record.status !== "completed") continue;
 		const event = events.get(record.event_id);
 		if (!event) continue;
-		const afterReview = record.completed_at
-			? record.completed_at > baseline && record.completed_at <= cutoff
-			: record.date > employee.last_review_date;
-		if (!afterReview) continue;
+		const completionDay = record.completed_at?.slice(0, 10);
+		if (
+			!completionDay ||
+			completionDay <= employee.last_review_date ||
+			completionDay > dataset.as_of_date
+		)
+			continue;
+		// Match the agent: a completed nonrepeatable activity adds its gain once.
+		const completionId = JSON.stringify(
+			record.event_id === "EV_036"
+				? [record.event_id, record.record_id]
+				: [record.event_id],
+		);
+		if (counted.has(completionId)) continue;
+		counted.add(completionId);
 		for (const skill of event.develops_skills) {
 			effective[skill.skill_id] = levelAfter(
 				effective[skill.skill_id] ?? 0,
@@ -86,16 +96,11 @@ export function profileFor(dataset: Dataset, employeeId: string): Profile {
 	}
 	if (
 		records.some(
-			(record) =>
-				record.status === "completed" &&
-				!record.completed_at &&
-				record.date <= employee.last_review_date &&
-				events.get(record.event_id)?.format === "self_paced" &&
-				(events.get(record.event_id)?.develops_skills.length ?? 0) > 0,
+			(record) => record.status === "completed" && !record.completed_at,
 		)
 	) {
 		warnings.push(
-			"В исходной истории нет точного времени завершения самостоятельного обучения. Участия, начатые до последней оценки или в тот же день, повторно не начисляются; их прирост может быть недоучтён.",
+			"У завершённых активностей без completed_at прирост после оценки не восстанавливается; он может быть недоучтён. Дата участия не считается датой завершения.",
 		);
 	}
 	const { target, source } = targetFor(employee);

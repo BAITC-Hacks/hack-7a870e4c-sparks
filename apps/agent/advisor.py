@@ -108,6 +108,12 @@ class Advisor:
             return None
         if event.event_id in self.completed and event.event_id not in REPEATABLE_EVENT_IDS:
             return None
+        if event.event_id in REPEATABLE_EVENT_IDS and any(
+            h.event_id == event.event_id and h.status == "completed"
+            and (h.completion_day or h.date) == self.context.as_of_date
+            for h in self.history
+        ):
+            return None
         if self.employee.role not in event.target_roles or self.employee.grade not in event.target_grades:
             return None
         if any(levels.get(skill, 0) < minimum for skill, minimum in event.prerequisites.items()):

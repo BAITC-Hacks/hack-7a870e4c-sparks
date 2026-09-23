@@ -40,8 +40,9 @@ def _advisor(request: PlanRequest | ChatRequest) -> Advisor:
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+def health() -> dict[str, str | bool]:
+    key = os.getenv("OPENAI_API_KEY") or os.getenv("OPENAI_KEY") or ""
+    return {"status": "ok", "ai_configured": bool(key.strip())}
 
 
 @app.post("/api/v1/advisor/plan")

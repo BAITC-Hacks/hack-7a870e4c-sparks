@@ -115,6 +115,25 @@ class RankingTests(unittest.TestCase):
                 data['activity_history'] = [{'event_id': 'design', 'status': 'completed', **extra}]
                 self.assertEqual(advisor(data).plan()['effective_skills']['SYSTEM'], 2)
 
+    def test_repeatable_club_cannot_be_recommended_twice_on_the_snapshot_day(self):
+        data = payload()
+        data['events'][0]['event_id'] = 'EV_036'
+        data['events'][0]['develops_skills'][0]['gain'] = 1
+        for completion in (
+            {'date': '2026-09-30', 'completed_at': '2026-10-01T12:00:00.000Z'},
+            {'date': '2026-10-01'},
+        ):
+            with self.subTest(completion=completion):
+                data['activity_history'] = [
+                    {'event_id': 'EV_036', 'status': 'completed', **completion},
+                ]
+                self.assertNotIn('EV_036', advisor(data).candidate_ids)
+        data['activity_history'] = [
+            {'event_id': 'EV_036', 'status': 'completed', 'date': '2026-09-30',
+             'completed_at': '2026-09-30T12:00:00.000Z'},
+        ]
+        self.assertIn('EV_036', advisor(data).candidate_ids)
+
     def test_input_rejects_out_of_range_skills_and_foreign_history(self):
         data = payload()
         data['employee']['skills']['SYSTEM'] = 9

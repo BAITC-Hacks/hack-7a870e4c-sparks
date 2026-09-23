@@ -10,8 +10,7 @@ export type AppConfig = {
 	credentialSecret: string;
 	demoEmployeeId: string;
 	demoEmployeePassword: string;
-	openaiApiKey: string;
-	openaiModel: string;
+	agentUrl: string;
 };
 
 export function readConfig(env = process.env): AppConfig {
@@ -21,6 +20,12 @@ export function readConfig(env = process.env): AppConfig {
 	if (env.DATABASE_URL && !/^postgres(ql)?:\/\//.test(env.DATABASE_URL))
 		throw new Error("DATABASE_URL должен указывать на PostgreSQL.");
 	const appOrigin = new URL(env.APP_ORIGIN || "http://localhost:3000").origin;
+	const agentUrl = (env.AGENT_URL ?? "http://127.0.0.1:8000").trim().replace(/\/$/, "");
+	if (agentUrl) {
+		const url = new URL(agentUrl);
+		if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash || url.pathname !== "/")
+			throw new Error("AGENT_URL должен быть HTTP(S)-адресом агента без пути и учетных данных.");
+	}
 	return {
 		port,
 		databaseUrl:
@@ -35,8 +40,7 @@ export function readConfig(env = process.env): AppConfig {
 		credentialSecret: env.CREDENTIAL_SECRET || "",
 		demoEmployeeId: env.DEMO_EMPLOYEE_ID || "E0005",
 		demoEmployeePassword: env.DEMO_EMPLOYEE_PASSWORD || "",
-		openaiApiKey: env.OPENAI_API_KEY || "",
-		openaiModel: env.OPENAI_MODEL || "gpt-4.1-mini",
+		agentUrl,
 	};
 }
 
