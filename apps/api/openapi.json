@@ -1,0 +1,4043 @@
+{
+  "info": {
+    "title": "Career Quest API",
+    "description": "API кейса Career Quest. Синтетические данные, дата среза из meta.as_of_date. HttpOnly cookie-сессия; сотрудник видит только себя, HR — профили, аналитику и импорт. Расчетный режим явно отделен от AI.",
+    "version": "1.0.0"
+  },
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "Индивидуальная авторизация и сессии"
+    },
+    {
+      "name": "Career",
+      "description": "Профиль, цель и карьерные шаги"
+    },
+    {
+      "name": "HR",
+      "description": "HR-аналитика и атомарный импорт"
+    },
+    {
+      "name": "System",
+      "description": "Состояние сервера"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "career_quest_session",
+        "description": "Сервер устанавливает cookie при успешном POST /api/auth/login."
+      }
+    },
+    "schemas": {}
+  },
+  "openapi": "3.1.2",
+  "paths": {
+    "/api/health": {
+      "get": {
+        "operationId": "health",
+        "summary": "Статус API и соединения с БД",
+        "tags": [
+          "System"
+        ],
+        "responses": {
+          "200": {
+            "description": "Response for status 200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "ai_configured"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "ai_configured": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response for status 400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response for status 401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response for status 403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response for status 404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response for status 409",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Response for status 413",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response for status 429",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Response for status 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "operationId": "login",
+        "summary": "Войти по логину и паролю",
+        "tags": [
+          "Auth"
+        ],
+        "description": "Создает сессию на 12 часов. Cookie: HttpOnly, SameSite=Lax, Secure на HTTPS. Ограничение: 10 неудачных попыток на аккаунт за 15 минут.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "username",
+                  "password"
+                ],
+                "properties": {
+                  "username": {
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "type": "string"
+                  },
+                  "password": {
+                    "minLength": 1,
+                    "maxLength": 1024,
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "username",
+                  "password"
+                ],
+                "properties": {
+                  "username": {
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "type": "string"
+                  },
+                  "password": {
+                    "minLength": 1,
+                    "maxLength": 1024,
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "username",
+                  "password"
+                ],
+                "properties": {
+                  "username": {
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "type": "string"
+                  },
+                  "password": {
+                    "minLength": 1,
+                    "maxLength": 1024,
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response for status 200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "username",
+                    "role",
+                    "employee_id",
+                    "full_name"
+                  ],
+                  "properties": {
+                    "username": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "employee",
+                        "hr"
+                      ]
+                    },
+                    "employee_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "full_name": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response for status 400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response for status 401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response for status 403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response for status 404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response for status 409",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Response for status 413",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response for status 429",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Response for status 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/session": {
+      "get": {
+        "operationId": "getSession",
+        "summary": "Текущий пользователь",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Response for status 200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "username",
+                    "role",
+                    "employee_id",
+                    "full_name"
+                  ],
+                  "properties": {
+                    "username": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "employee",
+                        "hr"
+                      ]
+                    },
+                    "employee_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "full_name": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response for status 400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response for status 401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response for status 403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response for status 404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response for status 409",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Response for status 413",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response for status 429",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Response for status 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "summary": "Завершить текущую сессию",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Response for status 200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "ok"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "const": true,
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response for status 400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response for status 401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response for status 403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response for status 404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response for status 409",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Response for status 413",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response for status 429",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Response for status 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/employees": {
+      "get": {
+        "operationId": "getEmployees",
+        "summary": "Список сотрудников для HR",
+        "tags": [
+          "HR"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Response for status 200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "employees"
+                  ],
+                  "properties": {
+                    "employees": {
+                      "type": "array",
+                      "items": {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "employee_id",
+                          "full_name",
+                          "role",
+                          "grade",
+                          "department"
+                        ],
+                        "properties": {
+                          "employee_id": {
+                            "type": "string"
+                          },
+                          "full_name": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string"
+                          },
+                          "grade": {
+                            "type": "string",
+                            "enum": [
+                              "Junior",
+                              "Middle",
+                              "Senior",
+                              "Lead"
+                            ]
+                          },
+                          "department": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response for status 400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response for status 401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response for status 403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response for status 404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response for status 409",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Response for status 413",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response for status 429",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Response for status 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/employees/{id}": {
+      "get": {
+        "operationId": "getProfile",
+        "summary": "Профиль и карьерная траектория",
+        "description": "Сотрудник получает только свой профиль; HR может просматривать любой. Readiness — покрытие требований цели, не вероятность повышения.",
+        "tags": [
+          "Career"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "maxLength": 128,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Response for status 200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "employee",
+                    "effective_skills",
+                    "target",
+                    "target_source",
+                    "readiness",
+                    "gaps",
+                    "history",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "employee": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "employee_id",
+                        "full_name",
+                        "department",
+                        "role",
+                        "grade",
+                        "manager_id",
+                        "hire_date",
+                        "tenure_months",
+                        "work_format",
+                        "preferred_language",
+                        "career_goal",
+                        "skills",
+                        "last_review_date"
+                      ],
+                      "properties": {
+                        "employee_id": {
+                          "type": "string"
+                        },
+                        "full_name": {
+                          "type": "string"
+                        },
+                        "department": {
+                          "type": "string"
+                        },
+                        "role": {
+                          "type": "string"
+                        },
+                        "grade": {
+                          "type": "string",
+                          "enum": [
+                            "Junior",
+                            "Middle",
+                            "Senior",
+                            "Lead"
+                          ]
+                        },
+                        "manager_id": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "hire_date": {
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "type": "string"
+                        },
+                        "tenure_months": {
+                          "type": "integer"
+                        },
+                        "work_format": {
+                          "type": "string",
+                          "enum": [
+                            "office",
+                            "hybrid",
+                            "remote"
+                          ]
+                        },
+                        "preferred_language": {
+                          "type": "string",
+                          "enum": [
+                            "ru",
+                            "kk",
+                            "en"
+                          ]
+                        },
+                        "career_goal": {
+                          "additionalProperties": false,
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "required": [
+                            "target_role",
+                            "target_grade"
+                          ],
+                          "properties": {
+                            "target_role": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "target_grade": {
+                              "type": "string",
+                              "enum": [
+                                "Junior",
+                                "Middle",
+                                "Senior",
+                                "Lead"
+                              ]
+                            }
+                          }
+                        },
+                        "skills": {
+                          "type": "object",
+                          "patternProperties": {
+                            "^(.*)$": {
+                              "minimum": 0,
+                              "maximum": 5,
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "last_review_date": {
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "effective_skills": {
+                      "type": "object",
+                      "patternProperties": {
+                        "^(.*)$": {
+                          "minimum": 0,
+                          "maximum": 5,
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "target": {
+                      "additionalProperties": false,
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "required": [
+                        "target_role",
+                        "target_grade"
+                      ],
+                      "properties": {
+                        "target_role": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "target_grade": {
+                          "type": "string",
+                          "enum": [
+                            "Junior",
+                            "Middle",
+                            "Senior",
+                            "Lead"
+                          ]
+                        }
+                      }
+                    },
+                    "target_source": {
+                      "type": "string",
+                      "enum": [
+                        "explicit",
+                        "next_grade",
+                        "none"
+                      ]
+                    },
+                    "readiness": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "gaps": {
+                      "type": "array",
+                      "items": {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "skill_id",
+                          "name",
+                          "current",
+                          "required",
+                          "gap",
+                          "critical",
+                          "covered"
+                        ],
+                        "properties": {
+                          "skill_id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "current": {
+                            "type": "number"
+                          },
+                          "required": {
+                            "type": "number"
+                          },
+                          "gap": {
+                            "type": "number"
+                          },
+                          "critical": {
+                            "type": "boolean"
+                          },
+                          "covered": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    },
+                    "history": {
+                      "type": "array",
+                      "items": {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "record_id",
+                          "employee_id",
+                          "event_id",
+                          "date",
+                          "due_date",
+                          "status",
+                          "completion_pct",
+                          "score",
+                          "feedback_rating",
+                          "assigned_by",
+                          "title",
+                          "mandatory"
+                        ],
+                        "properties": {
+                          "record_id": {
+                            "type": "string"
+                          },
+                          "employee_id": {
+                            "type": "string"
+                          },
+                          "event_id": {
+                            "type": "string"
+                          },
+                          "date": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                            "type": "string"
+                          },
+                          "due_date": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "completed",
+                              "in_progress",
+                              "dropped",
+                              "no_show",
+                              "declined",
+                              "overdue"
+                            ]
+                          },
+                          "completion_pct": {
+                            "minimum": 0,
+                            "maximum": 100,
+                            "type": "integer"
+                          },
+                          "score": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "feedback_rating": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "assigned_by": {
+                            "type": "string",
+                            "enum": [
+                              "self",
+                              "manager",
+                              "hr"
+                            ]
+                          },
+                          "completed_at": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "mandatory": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response for status 400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response for status 401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response for status 403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response for status 404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response for status 409",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Response for status 413",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response for status 429",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Response for status 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/employees/{id}/goal": {
+      "patch": {
+        "operationId": "updateGoal",
+        "summary": "Изменить карьерную цель",
+        "description": "Пара роли и грейда должна существовать в каталоге. null включает следующий грейд по умолчанию; у Lead следующего грейда нет.",
+        "tags": [
+          "Career"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "maxLength": 128,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "goal"
+                ],
+                "properties": {
+                  "goal": {
+                    "additionalProperties": false,
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "required": [
+                      "target_role",
+                      "target_grade"
+                    ],
+                    "properties": {
+                      "target_role": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "target_grade": {
+                        "type": "string",
+                        "enum": [
+                          "Junior",
+                          "Middle",
+                          "Senior",
+                          "Lead"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "goal"
+                ],
+                "properties": {
+                  "goal": {
+                    "additionalProperties": false,
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "required": [
+                      "target_role",
+                      "target_grade"
+                    ],
+                    "properties": {
+                      "target_role": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "target_grade": {
+                        "type": "string",
+                        "enum": [
+                          "Junior",
+                          "Middle",
+                          "Senior",
+                          "Lead"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "goal"
+                ],
+                "properties": {
+                  "goal": {
+                    "additionalProperties": false,
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "required": [
+                      "target_role",
+                      "target_grade"
+                    ],
+                    "properties": {
+                      "target_role": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "target_grade": {
+                        "type": "string",
+                        "enum": [
+                          "Junior",
+                          "Middle",
+                          "Senior",
+                          "Lead"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response for status 200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "employee",
+                    "effective_skills",
+                    "target",
+                    "target_source",
+                    "readiness",
+                    "gaps",
+                    "history",
+                    "warnings"
+                  ],
+                  "properties": {
+                    "employee": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "employee_id",
+                        "full_name",
+                        "department",
+                        "role",
+                        "grade",
+                        "manager_id",
+                        "hire_date",
+                        "tenure_months",
+                        "work_format",
+                        "preferred_language",
+                        "career_goal",
+                        "skills",
+                        "last_review_date"
+                      ],
+                      "properties": {
+                        "employee_id": {
+                          "type": "string"
+                        },
+                        "full_name": {
+                          "type": "string"
+                        },
+                        "department": {
+                          "type": "string"
+                        },
+                        "role": {
+                          "type": "string"
+                        },
+                        "grade": {
+                          "type": "string",
+                          "enum": [
+                            "Junior",
+                            "Middle",
+                            "Senior",
+                            "Lead"
+                          ]
+                        },
+                        "manager_id": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "hire_date": {
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "type": "string"
+                        },
+                        "tenure_months": {
+                          "type": "integer"
+                        },
+                        "work_format": {
+                          "type": "string",
+                          "enum": [
+                            "office",
+                            "hybrid",
+                            "remote"
+                          ]
+                        },
+                        "preferred_language": {
+                          "type": "string",
+                          "enum": [
+                            "ru",
+                            "kk",
+                            "en"
+                          ]
+                        },
+                        "career_goal": {
+                          "additionalProperties": false,
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "required": [
+                            "target_role",
+                            "target_grade"
+                          ],
+                          "properties": {
+                            "target_role": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "target_grade": {
+                              "type": "string",
+                              "enum": [
+                                "Junior",
+                                "Middle",
+                                "Senior",
+                                "Lead"
+                              ]
+                            }
+                          }
+                        },
+                        "skills": {
+                          "type": "object",
+                          "patternProperties": {
+                            "^(.*)$": {
+                              "minimum": 0,
+                              "maximum": 5,
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "last_review_date": {
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "effective_skills": {
+                      "type": "object",
+                      "patternProperties": {
+                        "^(.*)$": {
+                          "minimum": 0,
+                          "maximum": 5,
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "target": {
+                      "additionalProperties": false,
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "required": [
+                        "target_role",
+                        "target_grade"
+                      ],
+                      "properties": {
+                        "target_role": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "target_grade": {
+                          "type": "string",
+                          "enum": [
+                            "Junior",
+                            "Middle",
+                            "Senior",
+                            "Lead"
+                          ]
+                        }
+                      }
+                    },
+                    "target_source": {
+                      "type": "string",
+                      "enum": [
+                        "explicit",
+                        "next_grade",
+                        "none"
+                      ]
+                    },
+                    "readiness": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "gaps": {
+                      "type": "array",
+                      "items": {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "skill_id",
+                          "name",
+                          "current",
+                          "required",
+                          "gap",
+                          "critical",
+                          "covered"
+                        ],
+                        "properties": {
+                          "skill_id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "current": {
+                            "type": "number"
+                          },
+                          "required": {
+                            "type": "number"
+                          },
+                          "gap": {
+                            "type": "number"
+                          },
+                          "critical": {
+                            "type": "boolean"
+                          },
+                          "covered": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    },
+                    "history": {
+                      "type": "array",
+                      "items": {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "record_id",
+                          "employee_id",
+                          "event_id",
+                          "date",
+                          "due_date",
+                          "status",
+                          "completion_pct",
+                          "score",
+                          "feedback_rating",
+                          "assigned_by",
+                          "title",
+                          "mandatory"
+                        ],
+                        "properties": {
+                          "record_id": {
+                            "type": "string"
+                          },
+                          "employee_id": {
+                            "type": "string"
+                          },
+                          "event_id": {
+                            "type": "string"
+                          },
+                          "date": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                            "type": "string"
+                          },
+                          "due_date": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "completed",
+                              "in_progress",
+                              "dropped",
+                              "no_show",
+                              "declined",
+                              "overdue"
+                            ]
+                          },
+                          "completion_pct": {
+                            "minimum": 0,
+                            "maximum": 100,
+                            "type": "integer"
+                          },
+                          "score": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "feedback_rating": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "assigned_by": {
+                            "type": "string",
+                            "enum": [
+                              "self",
+                              "manager",
+                              "hr"
+                            ]
+                          },
+                          "completed_at": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "mandatory": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response for status 400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response for status 401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response for status 403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response for status 404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response for status 409",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Response for status 413",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response for status 429",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Response for status 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/employees/{id}/activities/{eventId}/complete": {
+      "post": {
+        "operationId": "completeActivity",
+        "summary": "Подтвердить выполнение и пересчитать навыки",
+        "description": "Демонстрационное завершение на дату среза. Повторный запрос идемпотентен; обязательные мероприятия исключены. Это не подтверждение посещения реального обучения.",
+        "tags": [
+          "Career"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "maxLength": 128,
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "maxLength": 128,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "properties": {}
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "properties": {}
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response for status 200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "profile",
+                    "already_completed"
+                  ],
+                  "properties": {
+                    "profile": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "employee",
+                        "effective_skills",
+                        "target",
+                        "target_source",
+                        "readiness",
+                        "gaps",
+                        "history",
+                        "warnings"
+                      ],
+                      "properties": {
+                        "employee": {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "employee_id",
+                            "full_name",
+                            "department",
+                            "role",
+                            "grade",
+                            "manager_id",
+                            "hire_date",
+                            "tenure_months",
+                            "work_format",
+                            "preferred_language",
+                            "career_goal",
+                            "skills",
+                            "last_review_date"
+                          ],
+                          "properties": {
+                            "employee_id": {
+                              "type": "string"
+                            },
+                            "full_name": {
+                              "type": "string"
+                            },
+                            "department": {
+                              "type": "string"
+                            },
+                            "role": {
+                              "type": "string"
+                            },
+                            "grade": {
+                              "type": "string",
+                              "enum": [
+                                "Junior",
+                                "Middle",
+                                "Senior",
+                                "Lead"
+                              ]
+                            },
+                            "manager_id": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "hire_date": {
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                              "type": "string"
+                            },
+                            "tenure_months": {
+                              "type": "integer"
+                            },
+                            "work_format": {
+                              "type": "string",
+                              "enum": [
+                                "office",
+                                "hybrid",
+                                "remote"
+                              ]
+                            },
+                            "preferred_language": {
+                              "type": "string",
+                              "enum": [
+                                "ru",
+                                "kk",
+                                "en"
+                              ]
+                            },
+                            "career_goal": {
+                              "additionalProperties": false,
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "required": [
+                                "target_role",
+                                "target_grade"
+                              ],
+                              "properties": {
+                                "target_role": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "target_grade": {
+                                  "type": "string",
+                                  "enum": [
+                                    "Junior",
+                                    "Middle",
+                                    "Senior",
+                                    "Lead"
+                                  ]
+                                }
+                              }
+                            },
+                            "skills": {
+                              "type": "object",
+                              "patternProperties": {
+                                "^(.*)$": {
+                                  "minimum": 0,
+                                  "maximum": 5,
+                                  "type": "integer"
+                                }
+                              }
+                            },
+                            "last_review_date": {
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "effective_skills": {
+                          "type": "object",
+                          "patternProperties": {
+                            "^(.*)$": {
+                              "minimum": 0,
+                              "maximum": 5,
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "target": {
+                          "additionalProperties": false,
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "required": [
+                            "target_role",
+                            "target_grade"
+                          ],
+                          "properties": {
+                            "target_role": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "target_grade": {
+                              "type": "string",
+                              "enum": [
+                                "Junior",
+                                "Middle",
+                                "Senior",
+                                "Lead"
+                              ]
+                            }
+                          }
+                        },
+                        "target_source": {
+                          "type": "string",
+                          "enum": [
+                            "explicit",
+                            "next_grade",
+                            "none"
+                          ]
+                        },
+                        "readiness": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "gaps": {
+                          "type": "array",
+                          "items": {
+                            "additionalProperties": false,
+                            "type": "object",
+                            "required": [
+                              "skill_id",
+                              "name",
+                              "current",
+                              "required",
+                              "gap",
+                              "critical",
+                              "covered"
+                            ],
+                            "properties": {
+                              "skill_id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "current": {
+                                "type": "number"
+                              },
+                              "required": {
+                                "type": "number"
+                              },
+                              "gap": {
+                                "type": "number"
+                              },
+                              "critical": {
+                                "type": "boolean"
+                              },
+                              "covered": {
+                                "type": "boolean"
+                              }
+                            }
+                          }
+                        },
+                        "history": {
+                          "type": "array",
+                          "items": {
+                            "additionalProperties": false,
+                            "type": "object",
+                            "required": [
+                              "record_id",
+                              "employee_id",
+                              "event_id",
+                              "date",
+                              "due_date",
+                              "status",
+                              "completion_pct",
+                              "score",
+                              "feedback_rating",
+                              "assigned_by",
+                              "title",
+                              "mandatory"
+                            ],
+                            "properties": {
+                              "record_id": {
+                                "type": "string"
+                              },
+                              "employee_id": {
+                                "type": "string"
+                              },
+                              "event_id": {
+                                "type": "string"
+                              },
+                              "date": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                "type": "string"
+                              },
+                              "due_date": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "completed",
+                                  "in_progress",
+                                  "dropped",
+                                  "no_show",
+                                  "declined",
+                                  "overdue"
+                                ]
+                              },
+                              "completion_pct": {
+                                "minimum": 0,
+                                "maximum": 100,
+                                "type": "integer"
+                              },
+                              "score": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ]
+                              },
+                              "feedback_rating": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ]
+                              },
+                              "assigned_by": {
+                                "type": "string",
+                                "enum": [
+                                  "self",
+                                  "manager",
+                                  "hr"
+                                ]
+                              },
+                              "completed_at": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "mandatory": {
+                                "type": "boolean"
+                              }
+                            }
+                          }
+                        },
+                        "warnings": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "already_completed": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response for status 400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response for status 401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response for status 403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response for status 404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response for status 409",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Response for status 413",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response for status 429",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Response for status 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/catalog": {
+      "get": {
+        "operationId": "getCatalog",
+        "summary": "Каталог навыков и профилей ролей",
+        "tags": [
+          "Career"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Response for status 200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "roles",
+                    "skills",
+                    "as_of_date"
+                  ],
+                  "properties": {
+                    "roles": {
+                      "type": "array",
+                      "items": {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "role",
+                          "grade",
+                          "required_skills",
+                          "critical_skills"
+                        ],
+                        "properties": {
+                          "role": {
+                            "type": "string"
+                          },
+                          "grade": {
+                            "type": "string",
+                            "enum": [
+                              "Junior",
+                              "Middle",
+                              "Senior",
+                              "Lead"
+                            ]
+                          },
+                          "required_skills": {
+                            "type": "object",
+                            "patternProperties": {
+                              "^(.*)$": {
+                                "minimum": 0,
+                                "maximum": 5,
+                                "type": "integer"
+                              }
+                            }
+                          },
+                          "critical_skills": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "skills": {
+                      "type": "array",
+                      "items": {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "skill_id",
+                          "name",
+                          "type",
+                          "category",
+                          "description"
+                        ],
+                        "properties": {
+                          "skill_id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "category": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "as_of_date": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response for status 400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response for status 401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response for status 403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response for status 404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response for status 409",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Response for status 413",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response for status 429",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Response for status 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/employees/{id}/recommendations": {
+      "post": {
+        "operationId": "getRecommendations",
+        "summary": "Получить до трех объяснимых рекомендаций",
+        "description": "Модель выбирает только допустимые мероприятия и подтвержденные факторы. Таймаут AI до 8 секунд. При недоступности модели возвращается mode=rules. Если допустимых шагов нет, массив пуст и приведена причина.",
+        "tags": [
+          "Career"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "maxLength": 128,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "properties": {}
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "properties": {}
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response for status 200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "mode",
+                    "model",
+                    "message",
+                    "recommendations",
+                    "generated_at",
+                    "duration_ms"
+                  ],
+                  "properties": {
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "ai",
+                        "rules"
+                      ]
+                    },
+                    "model": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "recommendations": {
+                      "maxItems": 3,
+                      "type": "array",
+                      "items": {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "event",
+                          "score",
+                          "factors",
+                          "next_session",
+                          "gains",
+                          "in_progress",
+                          "explanation"
+                        ],
+                        "properties": {
+                          "event": {
+                            "additionalProperties": false,
+                            "type": "object",
+                            "required": [
+                              "event_id",
+                              "title",
+                              "description",
+                              "type",
+                              "format",
+                              "duration_hours",
+                              "mandatory",
+                              "target_roles",
+                              "target_grades",
+                              "develops_skills",
+                              "prerequisites",
+                              "upcoming_sessions"
+                            ],
+                            "properties": {
+                              "event_id": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string"
+                              },
+                              "type": {
+                                "type": "string"
+                              },
+                              "format": {
+                                "type": "string",
+                                "enum": [
+                                  "online",
+                                  "offline",
+                                  "self_paced"
+                                ]
+                              },
+                              "duration_hours": {
+                                "type": "number"
+                              },
+                              "mandatory": {
+                                "type": "boolean"
+                              },
+                              "target_roles": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "target_grades": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "Junior",
+                                    "Middle",
+                                    "Senior",
+                                    "Lead"
+                                  ]
+                                }
+                              },
+                              "develops_skills": {
+                                "type": "array",
+                                "items": {
+                                  "additionalProperties": false,
+                                  "type": "object",
+                                  "required": [
+                                    "skill_id",
+                                    "gain",
+                                    "max_level"
+                                  ],
+                                  "properties": {
+                                    "skill_id": {
+                                      "type": "string"
+                                    },
+                                    "gain": {
+                                      "type": "number"
+                                    },
+                                    "max_level": {
+                                      "minimum": 0,
+                                      "maximum": 5,
+                                      "type": "integer"
+                                    }
+                                  }
+                                }
+                              },
+                              "prerequisites": {
+                                "type": "object",
+                                "patternProperties": {
+                                  "^(.*)$": {
+                                    "minimum": 0,
+                                    "maximum": 5,
+                                    "type": "integer"
+                                  }
+                                }
+                              },
+                              "upcoming_sessions": {
+                                "type": "array",
+                                "items": {
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          },
+                          "score": {
+                            "type": "number"
+                          },
+                          "factors": {
+                            "type": "array",
+                            "items": {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "id",
+                                "category",
+                                "text"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "category": {
+                                  "type": "string",
+                                  "enum": [
+                                    "grade",
+                                    "gap",
+                                    "history",
+                                    "target"
+                                  ]
+                                },
+                                "text": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          },
+                          "next_session": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "gains": {
+                            "type": "array",
+                            "items": {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "skill_id",
+                                "name",
+                                "before",
+                                "after",
+                                "target"
+                              ],
+                              "properties": {
+                                "skill_id": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "before": {
+                                  "type": "number"
+                                },
+                                "after": {
+                                  "type": "number"
+                                },
+                                "target": {
+                                  "type": "number"
+                                }
+                              }
+                            }
+                          },
+                          "in_progress": {
+                            "type": "boolean"
+                          },
+                          "explanation": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "generated_at": {
+                      "type": "string"
+                    },
+                    "duration_ms": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response for status 400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response for status 401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response for status 403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response for status 404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response for status 409",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Response for status 413",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response for status 429",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Response for status 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hr/overview": {
+      "get": {
+        "operationId": "getHrOverview",
+        "summary": "HR-сводка по дефицитам и участию",
+        "tags": [
+          "HR"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Response for status 200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "total_employees",
+                    "employees_without_step",
+                    "skill_gaps",
+                    "participation",
+                    "as_of_date"
+                  ],
+                  "properties": {
+                    "total_employees": {
+                      "type": "integer"
+                    },
+                    "employees_without_step": {
+                      "type": "array",
+                      "items": {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "employee_id",
+                          "full_name",
+                          "role",
+                          "reason"
+                        ],
+                        "properties": {
+                          "employee_id": {
+                            "type": "string"
+                          },
+                          "full_name": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "skill_gaps": {
+                      "type": "array",
+                      "items": {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "skill_id",
+                          "name",
+                          "employees",
+                          "average_gap"
+                        ],
+                        "properties": {
+                          "skill_id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "employees": {
+                            "type": "integer"
+                          },
+                          "average_gap": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    },
+                    "participation": {
+                      "type": "array",
+                      "items": {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "event_id",
+                          "title",
+                          "mandatory",
+                          "completed",
+                          "in_progress",
+                          "other",
+                          "total"
+                        ],
+                        "properties": {
+                          "event_id": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "mandatory": {
+                            "type": "boolean"
+                          },
+                          "completed": {
+                            "type": "integer"
+                          },
+                          "in_progress": {
+                            "type": "integer"
+                          },
+                          "other": {
+                            "type": "integer"
+                          },
+                          "total": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "as_of_date": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response for status 400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response for status 401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response for status 403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response for status 404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response for status 409",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Response for status 413",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response for status 429",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Response for status 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hr/import": {
+      "post": {
+        "operationId": "importData",
+        "summary": "Загрузить профили JSON и историю CSV",
+        "description": "Только синтетические данные. Один файл может быть пустым. Проверяется весь объединенный набор, затем атомарно выполняется upsert по employee_id/record_id. Ошибка отменяет весь запрос. Импорт не выдает учетные записи и не меняет роли.",
+        "tags": [
+          "HR"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "employees_json",
+                  "history_csv"
+                ],
+                "properties": {
+                  "employees_json": {
+                    "maxLength": 8388608,
+                    "type": "string"
+                  },
+                  "history_csv": {
+                    "maxLength": 8388608,
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "employees_json",
+                  "history_csv"
+                ],
+                "properties": {
+                  "employees_json": {
+                    "maxLength": 8388608,
+                    "type": "string"
+                  },
+                  "history_csv": {
+                    "maxLength": 8388608,
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "employees_json",
+                  "history_csv"
+                ],
+                "properties": {
+                  "employees_json": {
+                    "maxLength": 8388608,
+                    "type": "string"
+                  },
+                  "history_csv": {
+                    "maxLength": 8388608,
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Response for status 200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "employees",
+                    "history",
+                    "message"
+                  ],
+                  "properties": {
+                    "employees": {
+                      "type": "integer"
+                    },
+                    "history": {
+                      "type": "integer"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Response for status 400",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Response for status 401",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Response for status 403",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Response for status 404",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Response for status 409",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Response for status 413",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Response for status 429",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Response for status 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

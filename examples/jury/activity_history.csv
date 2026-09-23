@@ -1,0 +1,7 @@
+record_id,employee_id,event_id,date,due_date,status,completion_pct,score,feedback_rating,assigned_by
+JURY_ALPHA_001,JURY_BACKEND_ALPHA,EV_012,2026-09-20,,completed,100,92,4,self
+JURY_ALPHA_002,JURY_BACKEND_ALPHA,EV_005,2026-09-25,,in_progress,40,,,self
+JURY_ALPHA_003,JURY_BACKEND_ALPHA,EV_001,2025-10-15,2025-10-31,completed,100,95,4,hr
+JURY_ALPHA_004,JURY_BACKEND_ALPHA,EV_001,2026-09-15,2026-09-30,completed,100,97,5,hr
+JURY_BETA_001,JURY_QA_BETA,EV_019,2026-08-20,,completed,100,,5,manager
+JURY_BETA_002,JURY_QA_BETA,EV_036,2026-09-10,,completed,100,,4,self

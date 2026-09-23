@@ -1,0 +1,19 @@
+# Dependencies and generated Prisma client
+/node_modules/
+/generated/
+
+# Build and test artifacts
+/build/
+/coverage/
+/test-results/
+*.tsbuildinfo
+*.log
+*.trace
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+.agents/
+.DS_Store

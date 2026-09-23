@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: career
+      POSTGRES_DB: career_quest
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - career_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U career -d career_quest"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+  api:
+    init: true
+    ports:
+      - "${API_BIND_ADDRESS:-127.0.0.1}:${API_PORT:-3001}:3001"
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      API_PORT: 3001
+      API_HOST: 0.0.0.0
+      DATABASE_URL: postgresql://career:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/career_quest?schema=public
+      DATASET_PATH: /app/case_1/career_quest_dataset
+      HR_PASSWORD: ${HR_PASSWORD:?Set HR_PASSWORD in .env}
+      CREDENTIAL_SECRET: ${CREDENTIAL_SECRET:?Set CREDENTIAL_SECRET in .env}
+      DEMO_EMPLOYEE_ID: ${DEMO_EMPLOYEE_ID:-E0005}
+      DEMO_EMPLOYEE_PASSWORD: ${DEMO_EMPLOYEE_PASSWORD:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+      APP_ORIGIN: ${APP_ORIGIN:-http://localhost:3000}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    stop_grace_period: 20s
+volumes:
+  career_postgres_data:
